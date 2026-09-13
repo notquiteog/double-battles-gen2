@@ -90,3 +90,23 @@ monorepo for the full contract.
 Pokémon is a trademark of Nintendo; the Gen 1 games are © Nintendo /
 Creatures Inc. / GAME FREAK inc. Unofficial fan mod; no ROMs, no
 copyrighted game content. See the repository NOTICE.md.
+
+## Crystal 2v2 (this fork)
+
+The Gen 1 mod above is unchanged. This fork adds what the stock mod could
+not do: real two-a-side battles on Crystal, run by the engine's own Gen 2
+battle sim — the same battle object the base game's stage renders, which
+the Battle Art voxel fork stages on the diorama.
+
+`lib/doubles2.lua` decorates the engine's battle instance in place and
+drives four-actor rounds through the engine's own primitives (useMove,
+priority, effective speed, experience, residuals). Trainer 2v2 fields the
+trainer's second able mon; wild doubles roll the second foe from the map's
+own table through the engine's `World:rollWild`. When the fight comes back
+down to 1v1 the engine's own turn loop takes over, stock.
+
+Beta limits, before the presentation chunk lands: the second foe's HP
+plate and sprite do not render yet (its attacks, its text and your damage
+against it all do), the player-side partner and aim menu are next, and
+Battle Art gets a second voxel anchor with them. Turn CRYSTAL 2V2 (BETA)
+on in Mod Settings to try it.

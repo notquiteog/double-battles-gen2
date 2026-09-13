@@ -2388,12 +2388,6 @@ return function(mod)
   if doubles2Gen2 then
     mod.events:on("battle.started", function(ev)
       local battle = ev and ev.battle
-      mod.log:info("[db2hook] fired: battle=%s trainer=%s roaming=%s gen2opt=%s wildopt=%s world=%s",
-        tostring(battle ~= nil), tostring(battle and battle.trainer ~= nil),
-        tostring(battle and battle.roaming),
-        tostring(mod.options:get("gen2_doubles")),
-        tostring(mod.options:get("wild_doubles")),
-        tostring(capturedWorld ~= nil))
       if not battle or battle.over or battle.doubles then return end
       if battle.roaming then return end -- roamers stay strictly 1v1
       if not mod.options:get("gen2_doubles") then return end

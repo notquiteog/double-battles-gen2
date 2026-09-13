@@ -2372,9 +2372,28 @@ return function(mod)
       end
     end
   end
+  local capturedWorld = nil
+  do
+    local okW, World = pcall(require, "src.world.gen2.World")
+    if okW and World and type(World.startBattle) == "function"
+        and not World.doublesGen2StartWrap then
+      local origStart = World.startBattle
+      World.startBattle = function(self, opts, ...)
+        capturedWorld = self
+        return origStart(self, opts, ...)
+      end
+      World.doublesGen2StartWrap = true
+    end
+  end
   if doubles2Gen2 then
     mod.events:on("battle.started", function(ev)
       local battle = ev and ev.battle
+      mod.log:info("[db2hook] fired: battle=%s trainer=%s roaming=%s gen2opt=%s wildopt=%s world=%s",
+        tostring(battle ~= nil), tostring(battle and battle.trainer ~= nil),
+        tostring(battle and battle.roaming),
+        tostring(mod.options:get("gen2_doubles")),
+        tostring(mod.options:get("wild_doubles")),
+        tostring(capturedWorld ~= nil))
       if not battle or battle.over or battle.doubles then return end
       if battle.roaming then return end -- roamers stay strictly 1v1
       if not mod.options:get("gen2_doubles") then return end
@@ -2391,24 +2410,80 @@ return function(mod)
         return
       end
       -- wild doubles: the second foe rolls from the CURRENT map's own
-      -- table, through the engine's own roller -- never a made-up spawn
+      -- table, through the engine's own slot roller -- never a made-up
+      -- spawn.  The roll returns the species id exactly as the world's
+      -- own wild mons carry them.
       local chance = doubleChance()
       if chance <= 0 then return end
-      local world = getWorld(currentGame or Game)
-      if not (world and world.rollWild) then return end
-      local okRoll, roll = pcall(function() return world:rollWild() end)
+      local world = capturedWorld
+      if not (world and world.map and world.encounters) then return end
+      local okE, Encounter = pcall(require, "src.battle.gen2.Encounter")
+      if not (okE and Encounter and Encounter.grassSlot) then return end
+      local okRoll, roll = pcall(Encounter.grassSlot, world.encounters,
+        world.map.id, world.tod, battle.random)
       if not (okRoll and type(roll) == "table" and roll.species) then return end
-      local def = battle.data.pokemon and battle.data.pokemon[roll.species]
-      if not (def and def.id) then return end
-      local okMon, secondMon = pcall(Gen2Mon.new, battle.data, def.id,
-        roll.level or 2)
+      local Gen2Mon = require("src.battle.gen2.Mon")
+      local okMon, secondMon = pcall(Gen2Mon.new, battle.data,
+        roll.species, roll.level or 2)
       if not (okMon and secondMon) then return end
-      secondMon.moves = { { id = "TACKLE", pp = 35, maxPp = 35 } }
+      if not (secondMon.moves and #secondMon.moves > 0) then
+        secondMon.moves = { { id = "TACKLE", pp = 35, maxPp = 35 } }
+      end
       battle.enemyParty[2] = secondMon
       doubles2Gen2.decorate(battle, nil, secondMon)
-      mod.log:info("wild double: %s joins %s", tostring(def.id),
+      mod.log:info("wild double: %s joins %s", tostring(roll.species),
         tostring(battle.enemy and battle.enemy.species))
     end)
+  end
+
+  -- Native presentation: when the voxel fork is NOT staging the battle,
+  -- draw the second foe beside the lead on the engine screen itself.  With
+  -- the voxel fork present it composes both mons into its own staged card
+  -- and this wrap stands down (checked per call, so a settings change
+  -- mid-session cannot double-draw).  The second HP plate stays a known
+  -- beta gap; the partner's attacks and the damage against it are live.
+  if doubles2Gen2 then
+    local okBS, BattleState = pcall(require, "src.ui.gen2.BattleState")
+    if okBS and BattleState and type(BattleState.drawPic) == "function"
+        and not BattleState.doublesGen2PicHook then
+      local innerPic = BattleState.drawPic
+      BattleState.drawPic = function(self, mon, back, ...)
+        local battle = self and self.battle
+        local partner = nil
+        local shift = 0
+        if battle and battle.doubles and mon then
+          if mon == battle.enemy then
+            partner = battle.enemy2
+            shift = -56 -- toward screen centre, left of the lead
+          elseif mon == battle.player then
+            partner = battle.player2
+            shift = 56
+          end
+        end
+        local extra = {}
+        for i = 1, select("#", ...) do extra[i] = select(i, ...) end
+        if not (partner and (partner.hp or 0) > 0) then
+          return innerPic(self, mon, back, unpack(extra))
+        end
+        local exAll = self.game and self.game.mods and self.game.mods.exports
+        if exAll and exAll.BATTLE_ART_VOXEL_FORK then
+          -- the staged card already carries both mons
+          return innerPic(self, mon, back, unpack(extra))
+        end
+        local g = love.graphics
+        local shifted = false
+        if pcall(g.push) then
+          if pcall(g.translate, shift, 0) then
+            shifted = true
+            pcall(innerPic, self, partner, back, unpack(extra))
+          end
+          pcall(g.pop)
+        end
+        local led = innerPic(self, mon, back, unpack(extra))
+        return led
+      end
+      BattleState.doublesGen2PicHook = true
+    end
   end
 
   mod.log:info("crystal 2v2 core loaded (beta presentation: %s)",

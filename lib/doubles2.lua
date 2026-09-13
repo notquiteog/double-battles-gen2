@@ -244,6 +244,7 @@ local function sendInsAndCollapse(battle)
         end
         d[emptySlot] = mon
         d.index[emptySlot] = nextIndex
+        battle[emptySlot] = mon
         if emptySlot == side then
           if side == "player" then battle.player, battle.playerIndex = mon, nextIndex
           else battle.enemy, battle.enemyIndex = mon, nextIndex end
@@ -338,6 +339,7 @@ function M.takeTurn2v2(self, actions)
           self:switchEnemy(tonumber(act.index) or 0)
           d[slot], d.index[slot] = self.enemy, self.enemyIndex
         end
+        battle[side .. "2"] = d[slot]
         if side == "player" then
           self.player, self.playerIndex = lead, leadIndex
         else
@@ -474,6 +476,11 @@ function M.decorate(battle, secondPlayer, secondEnemy)
   d.enemy, d.index.enemy = battle.enemy, battle.enemyIndex
   d.player2 = secondPlayer
   d.enemy2 = secondEnemy
+  -- The engine screen's activeMon(side) reads battle[side], so the second
+  -- slots live here too: the staged-battle textures and any plate wrap
+  -- resolve their mon through that seam without touching the screen.
+  battle.player2 = secondPlayer
+  battle.enemy2 = secondEnemy
   if secondPlayer then
     for i, mon in ipairs(battle.party or {}) do
       if mon == secondPlayer then d.index.player2 = i end

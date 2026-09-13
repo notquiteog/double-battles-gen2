@@ -15,5 +15,9 @@
   "affects_link": true,
   "game_version": "0.0.0-dev || >=0.1.0 <2.0.0",
   "description": "Wild and trainer double battles: 1v2, 2v2 and trainer pairs, in classic, wide and 3D.",
-  "github": "shanehudson-gen1recomp-mods/double_battles"
+  "github": "shanehudson-gen1recomp-mods/double_battles",
+  "games": [
+    "gen1",
+    "gen2"
+  ]
 }

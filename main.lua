@@ -27,7 +27,7 @@ return function(mod)
 
   mod.options:define({
     { key = "wild_doubles", label = "WILD DOUBLES", type = "choice",
-      default = "off",
+      default = "sometimes",
       choices = { { "OFF", "off" }, { "SOMETIMES", "sometimes" },
                   { "ALWAYS", "always" } } },
     { key = "your_side", label = "YOUR SIDE", type = "choice",
@@ -51,8 +51,8 @@ return function(mod)
     -- actives a side.  Presentation rides the engine screen today: the
     -- second foe fights for real, its text and your damage show, its own
     -- plate and sprite do not yet.  Off by default until that chunk lands.
-    { key = "gen2_doubles", label = "CRYSTAL 2V2 (BETA)", type = "toggle",
-      default = false },
+    { key = "gen2_doubles", label = "CRYSTAL 2V2", type = "toggle",
+      default = true },
   })
 
   local function doubleChance()
@@ -2428,6 +2428,39 @@ return function(mod)
       mod.log:info("wild double: %s joins %s", tostring(roll.species),
         tostring(battle.enemy and battle.enemy.species))
     end)
+  end
+
+  -- The second foe's HP plate: the enemy HUD's own tile sequence, offset
+  -- four rows down, reading the slot-2 mon through the screen's own
+  -- parametrised state helpers.  The plate's shown-HP key is the slot's
+  -- own ("enemy2"), so the bar reads true values from the first frame.
+  if doubles2Gen2 then
+    local okHud, HudState = pcall(require, "src.ui.gen2.BattleState")
+    local okChrome, Chrome = pcall(require, "src.ui.gen2.Chrome")
+    if okHud and okChrome and Chrome and type(HudState.drawEnemyHud) == "function"
+        and not HudState.doublesGen2HudHook then
+      local innerHud = HudState.drawEnemyHud
+      HudState.drawEnemyHud = function(self, ...)
+        local led = innerHud(self, ...)
+        local battle = self.battle
+        local mon = battle and battle.doubles and battle.enemy2
+        if not (mon and (mon.hp or 0) > 0) then return led end
+        if not (self:statusHUDVisible() and self.showEnemyHud
+            and not self:hudCleared("enemy")) then return led end
+        Chrome.printThrough(self:name(mon), 1, 4, Chrome.DEFAULT_BOX_PALETTE)
+        Chrome.printThrough(self:statusTag(mon, "enemy2")
+          or ("<LV>" .. tostring(mon.level or 1)), 6, 5,
+          Chrome.DEFAULT_BOX_PALETTE)
+        local gender = self:genderSymbol(mon)
+        if gender then
+          Chrome.printThrough(gender, 9, 5, Chrome.DEFAULT_BOX_PALETTE)
+        end
+        self:drawHpBar(mon, "enemy2", 2, 6)
+        self:drawFrame(1, 7, 10, false)
+        return led
+      end
+      HudState.doublesGen2HudHook = true
+    end
   end
 
   -- Native presentation: when the voxel fork is NOT staging the battle,

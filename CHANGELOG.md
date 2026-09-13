@@ -1,3 +1,14 @@
+## [0.8.0] - 2026-09-13 - the second HP plate, and doubles on by default
+
+- The second foe's HP plate draws four rows under the lead's, on the
+  enemy HUD's own tile sequence (name, level or status tag, gender, the
+  HP bar and frame) through the screen's own parametrised state helpers.
+  The plate's shown-HP key is the slot's own, so the bar reads true
+  values from the first frame.
+- Doubles default on: WILD DOUBLES ships at SOMETIMES (about 30% of wild
+  encounters, the rate the stock mod's own docs suggest) and CRYSTAL 2V2
+  ships on.  Both remain player settings.
+
 ## [0.7.0] - 2026-09-13 - Crystal 2v2 core (beta)
 
 The Gen 1 mod is unchanged. This release adds the Crystal half the fork

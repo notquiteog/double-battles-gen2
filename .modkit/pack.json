@@ -1,0 +1,115 @@
+{
+  "modkit": "1.0.0",
+  "packed_at": "2026-08-19T02:15:03Z",
+  "id": "double_battles",
+  "version": "0.6.1",
+  "api": 2,
+  "engine_range": "0.0.0-dev || >=0.1.0 <2.0.0",
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 17993,
+      "sha256": "98d70d6ae08b17e1fd728df1f0f13737a00a7886ecff1f0c5054b4be14f698a7"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4479,
+      "sha256": "4016da689e1ecbc43da36e50a9b243147dd37b501e36b78634f4d65b15aa2b8c"
+    },
+    {
+      "path": "lib/dramatic_shape.lua",
+      "bytes": 12963,
+      "sha256": "60c97b6daad3612592639e9c768c4a297b443b910a8ffbd417785cb595a22b66"
+    },
+    {
+      "path": "lib/shared/skylib.lua",
+      "bytes": 54964,
+      "sha256": "2fd2136f5a07d1e50a894d4fd8bedaf01a4fb2a065ca58b746c163af50ff6605"
+    },
+    {
+      "path": "main.lua",
+      "bytes": 94393,
+      "sha256": "da320c6fa20323bded051ba5e88b0a795fe7b6629a0a8b63eb3ab8644c628765"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 515,
+      "sha256": "e8ffbad4d46c6229230003c3cf2a0499473f5f42c534ac1e0f03419071851659"
+    },
+    {
+      "path": "mod.card",
+      "bytes": 686,
+      "sha256": "597819c0c91a7a7cd5302d7c6bc1833e617367b28f28933cfa57627d5cf4ed9b"
+    },
+    {
+      "path": "tests/double_battles_aimmenu_test.lua",
+      "bytes": 3601,
+      "sha256": "3e2c7aab5bc79e92064d765aa6a40dec9e4d666193b71f6fd137af8d8c86be6d"
+    },
+    {
+      "path": "tests/double_battles_animfx_test.lua",
+      "bytes": 3661,
+      "sha256": "919be76e054bd75089c95f1a4e13d19b5e6fc991b852e9fb93ae03ec680a0998"
+    },
+    {
+      "path": "tests/double_battles_ball_test.lua",
+      "bytes": 3824,
+      "sha256": "97b67d33ba03537a0f33d0da0d1ac35717467e6144b4f24362fcf111b8cb9c08"
+    },
+    {
+      "path": "tests/double_battles_choose_lead_test.lua",
+      "bytes": 5705,
+      "sha256": "f7a393373c067aba15bf4606ecf3acdb30d5a0b99ac0ce02ad0ff616d0825c8a"
+    },
+    {
+      "path": "tests/double_battles_crystal_test.lua",
+      "bytes": 3579,
+      "sha256": "4c9bd2fa869609c5ac9b7043e3d0a010e7118f42e6029f394719c8c099b38261"
+    },
+    {
+      "path": "tests/double_battles_hud_test.lua",
+      "bytes": 5251,
+      "sha256": "6a998a98709357373dcd3338da8fed4bd8a81e4cd5a813e7f27ac5154dae6c48"
+    },
+    {
+      "path": "tests/double_battles_load_test.lua",
+      "bytes": 1868,
+      "sha256": "78f1658ee9dac70383b3115ae9341d3eed2dfe5548b8a4183654b77f9268d5ad"
+    },
+    {
+      "path": "tests/double_battles_partner_fallback_test.lua",
+      "bytes": 3447,
+      "sha256": "0beb5e6812291bab89ec763369339734ff350d66aeb4b360456b9b8d1f7d79db"
+    },
+    {
+      "path": "tests/double_battles_scene3d_test.lua",
+      "bytes": 7034,
+      "sha256": "6e26cf5afeadb02fabe1a04d0f31dc19ddb8b255c1b978f1490946fe3229ad71"
+    },
+    {
+      "path": "tests/double_battles_sources_test.lua",
+      "bytes": 4719,
+      "sha256": "a7569410576409e90c80b509b1a8be2abe862a74b34ed126c353885444623a03"
+    },
+    {
+      "path": "tests/double_battles_switch_test.lua",
+      "bytes": 6334,
+      "sha256": "4e6c7e75062738edf72a4819c597168fc4ea5c4221c2a08b8b09f86e8b192af3"
+    },
+    {
+      "path": "tests/double_battles_trainer_pair_test.lua",
+      "bytes": 7438,
+      "sha256": "173471347213312b016030752c10ea4ad7b4aa0471d369153861e466d44b7785"
+    },
+    {
+      "path": "tests/double_battles_turn_test.lua",
+      "bytes": 3002,
+      "sha256": "f15d1959f98281ff4510a10d11cf472d17f5bc16c629037350c83a84a5a047c4"
+    }
+  ],
+  "lint": {
+    "no_rom_content": "pass",
+    "schema": "pass",
+    "cross_refs": "pass"
+  }
+}

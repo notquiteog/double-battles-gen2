@@ -1,0 +1,534 @@
+-- Real 2v2 for Crystal: a layer over the engine's own Gen 2 battle sim.
+--
+-- The engine's Battle is singles-only: one active mon per side, the round
+-- sequenced inside a local runTurn() we cannot reach.  What it DOES expose
+-- is a method-level primitive set -- useMove(attacker, defender, moveId),
+-- effectiveSpeed, movePriority, awardExperience, the per-mon residual
+-- ticks -- all driven by self.  So instead of forking 5,484 lines of cart
+-- mechanics, this file decorates the engine's own battle instance in place
+-- (the way double_battles decorates Gen 1's BattleState) and adds the
+-- pieces the engine cannot do:
+--
+--   * two actives per side (player2 / enemy2) with their own party indexes
+--   * a four-actor round: non-move arms first, then moves ordered by the
+--     engine's own priority + speed (Quick Claw included, ties by roll)
+--   * targeting: each action names its defender; a fainted target falls
+--     through to the side's other slot, then fails quietly
+--   * per-attack faint handling that does NOT trigger the engine's 1v1
+--     replacement machinery: the slot stays empty until the round ends
+--   * end-of-round send-ins from the bench, and collapse: the moment both
+--     sides stand exactly one mon, the engine's own takeTurn takes the
+--     battle back (party rotation, catching, running -- all stock again)
+--
+-- Everything else -- damage, accuracy, crits, effects, items, weather,
+-- experience curves -- IS the engine's code, running on the same battle
+-- object the real battle stage renders.
+--
+-- What the core deliberately leaves to the layers above: the second HP
+-- plates and sprite slots (presentation), the aim menu (UI), and where the
+-- second combatants come from (startWildDouble / trainer 2v2 wiring).
+
+local V = ...
+
+local M = {}
+M.__index = M
+
+local Runtime = require("src.mods.Runtime")
+local Strings = require("src.core.Strings")
+local Battle, Effects
+local function engine()
+  if not Battle then
+    Battle = require("src.battle.gen2.Battle")
+    Effects = require("src.battle.gen2.Effects")
+  end
+  return Battle
+end
+
+local SLOTS = { "player", "player2", "enemy", "enemy2" }
+
+-- The engine's own lead fields are the source of truth for slot 1; call
+-- after anything mutates them (switches, send-ins).
+local function syncLeads(battle)
+  local d = battle.doubles
+  d.player, d.index.player = battle.player, battle.playerIndex
+  d.enemy, d.index.enemy = battle.enemy, battle.enemyIndex
+end
+
+-- The four actives, alive ones only, in the layer's canonical slot order.
+local function actives(battle)
+  local d = battle.doubles
+  local out = {}
+  for _, slot in ipairs(SLOTS) do
+    local mon = d[slot]
+    if mon and (mon.hp or 0) > 0 then out[#out + 1] = { slot = slot, mon = mon } end
+  end
+  return out
+end
+
+local function livingCount(battle, side)
+  local d = battle.doubles
+  local n = 0
+  for _, slot in ipairs({ side, side .. "2" }) do
+    local mon = d[slot]
+    if mon and (mon.hp or 0) > 0 then n = n + 1 end
+  end
+  return n
+end
+
+-- A side record shaped like Battle:sideRecord's, for the slot the engine
+-- does not know about.  Same payload shape battler_switched carries.
+local function slotSideRecord(battle, slot)
+  local d = battle.doubles
+  local sideKey = (slot == "player" or slot == "player2") and "player" or "enemy"
+  local side
+  for _, s in ipairs(battle.sides or {}) do
+    if s.key == sideKey then side = s end
+  end
+  side = side or { index = sideKey == "player" and 1 or 2, key = sideKey }
+  return {
+    index = side.index, key = sideKey,
+    slot = slot,
+    battlers = { d[slot] },
+    screens = side.screens or {},
+    hazards = side.hazards or {},
+    tokens = side.tokens or {},
+  }
+end
+
+-- Faint a mid-round slot: the cart's doubles never send a replacement into
+-- a round that already started, so the slot just goes empty until the
+-- end-of-round send-in.  Experience and the faint events are the engine's
+-- own, awarded here while the attacker context is still live.
+local function announceFaint(battle, slot)
+  local d = battle.doubles
+  local mon = d[slot]
+  if not mon or (mon.hp or 0) > 0 or d.fainted[slot] then return end
+  d.fainted[slot] = true
+  local wildText = (slot == "enemy" or slot == "enemy2")
+  local template = wildText
+    and Strings.source("Wild %s fainted!")
+    or Strings.source("%s fainted!")
+  battle:emit({ kind = "faint", side = slot,
+    text = Strings(template, battle:monName(mon)) })
+  Runtime.emit("battle.fainted", { battle = battle, battler = mon,
+    side = slotSideRecord(battle, slot) })
+  battle:awardExperience(mon)
+end
+
+-- Every actor on `side` is down and no bench member stands ready: the
+-- battle ends here, with the cart's own win/loss plumbing.
+local function checkSideWipe(battle, side)
+  local d = battle.doubles
+  if livingCount(battle, side) > 0 then return false end
+  local bench
+  if side == "player" then
+    bench = battle.party
+  else
+    bench = battle.enemyParty or {}
+  end
+  local nextIndex = Battle.firstHealthy(bench)
+  -- Someone is waiting: NOT a wipe.  The end-of-round send-in moves them up.
+  if nextIndex then
+    -- A fainted mon must not still sit in the party slot the rotation reads.
+    return false
+  end
+  if side == "player" then
+    battle:endBattle("lose")
+  else
+    battle:emit({ kind = "message",
+      text = Strings("%s was defeated!", battle.trainer and battle.trainer.name or "Foe") })
+    if battle.trainer then
+      battle:printWinLossText("win")
+      battle:awardPrizeMoney()
+    end
+    local Prize = require("src.battle.gen2.Prize")
+    local coins = Prize.payDay(battle.save, battle.payDay, battle.amuletCoin)
+    battle.payDay = nil
+    battle:endBattle("win")
+  end
+  return true
+end
+
+-- Mid-round faint sweep: announce, pay out, end the battle if a side is
+-- wiped with no bench.  Returns true when the battle ended.
+local function sweepFaints(battle)
+  for _, slot in ipairs(SLOTS) do announceFaint(battle, slot) end
+  if checkSideWipe(battle, "enemy") then return true end
+  return checkSideWipe(battle, "player")
+end
+
+-- The attack arm, shared by all four slots.  Everything up to useMove is
+-- runTurn's own pre-move plumbing, generalised from the player/enemy pair
+-- to any attacker; what differs for the player slots is the obedience roll,
+-- which the cart runs for the player's LEAD only in a singles round.  A
+-- partner here obeys the same check as the lead on the player side and is
+-- skipped on the enemy side, matching enemyAttack().
+local function attack(battle, actor, defender)
+  local mon, move = actor.mon, actor.move
+  local d = battle.doubles
+  local forced = battle:forcedMove(mon)
+  if forced then move = forced end
+  local stored = battle:volatile(mon).chargeMove
+  if stored then move = stored end
+  if not battle:canAct(mon, move) then return end
+  local charging = battle:volatile(mon).chargeMove == move
+    or battle:lockedInMove(mon) == move
+  local bideLocked = battle:fightLockedMove(mon) == move
+  if not charging and not bideLocked and not battle:hasUsableMoves(mon) then
+    battle:emit({ kind = "message",
+      text = Strings("%s has no moves left!", battle:monName(mon)) })
+    move = Battle.STRUGGLE
+  end
+  if battle:moveDisabled(mon, move) then
+    local state = battle:volatile(mon)
+    state.chargeMove, state.vanished = nil, nil
+    local moveDef = battle:moveDef(move)
+    local moveName = (moveDef and moveDef.name) or move or "?"
+    battle:emit({ kind = "message",
+      text = Strings("%s's %s is DISABLED!", battle:monName(mon), moveName) })
+    return
+  end
+  if actor.slot == "player" or actor.slot == "player2" then
+    -- CheckObedience: the cart runs it at the head of the move's effect
+    -- list for the player's side.  The lead's roll is the engine's own
+    -- (it reads the battle's player context); a partner rolls through the
+    -- same gate by temporarily standing in that context.
+    local lead, leadIndex = battle.player, battle.playerIndex
+    local wasParticipants = battle.participants
+    battle.player, battle.playerIndex = mon, d.index[actor.slot]
+    local interrupted = battle:checkObedience(move)
+    battle.player, battle.playerIndex = lead, leadIndex
+    battle.participants = wasParticipants
+    if interrupted then return end
+  end
+  battle:useMove(mon, defender, move)
+end
+
+-- Resolve an action's defender at the moment it fires: a named target that
+-- fainted earlier in the round falls through to the side's other standing
+-- slot; nothing standing means the move fails quietly.
+local function defenderFor(battle, actor, targetSlot)
+  local d = battle.doubles
+  local side = (actor.slot == "player" or actor.slot == "player2")
+    and "enemy" or "player"
+  local order = targetSlot and { targetSlot }
+    or { side, side == "enemy" and "enemy2" or "player2" }
+  for _, slot in ipairs(order) do
+    local mon = d[slot]
+    if mon and (mon.hp or 0) > 0 then return mon, slot end
+  end
+  return nil
+end
+
+-- End-of-round: bench members walk into empty slots (the cart's own send
+-- shape, emitted on the slot's side key), and a 2v2 that has become 1v1
+-- hands the battle back to the engine's own turn loop.
+local function sendInsAndCollapse(battle)
+  local d = battle.doubles
+  for _, side in ipairs({ "player", "enemy" }) do
+    if livingCount(battle, side) == 0 and not battle.over then
+      local bench = side == "player" and battle.party or (battle.enemyParty or {})
+      local used = {}
+      for _, slot in ipairs(SLOTS) do
+        local mon = d[slot]
+        if mon then used[mon] = true end
+      end
+      local nextIndex = Battle.firstHealthy(bench)
+      while nextIndex and not used[bench[nextIndex]] do
+        local mon = bench[nextIndex]
+        -- The first empty slot on this side takes the send-in.
+        local emptySlot
+        for _, s in ipairs({ side, side .. "2" }) do
+          local cur = d[s]
+          if not (cur and (cur.hp or 0) > 0) then emptySlot = s break end
+        end
+        d[emptySlot] = mon
+        d.index[emptySlot] = nextIndex
+        if emptySlot == side then
+          if side == "player" then battle.player, battle.playerIndex = mon, nextIndex
+          else battle.enemy, battle.enemyIndex = mon, nextIndex end
+        end
+        battle:emit({ kind = "send", side = emptySlot, mon = mon,
+          replacement = true, hp = mon.hp or 0, status = mon.status or false,
+          level = mon.level, experience = mon.experience,
+          text = Battle.sentOutText(battle.trainer and battle.trainer.name or "Foe",
+            battle:monName(mon)) })
+        Runtime.emit("battle.battler_switched", { battle = battle,
+          side = slotSideRecord(battle, emptySlot), battler = mon })
+        syncLeads(battle)
+        break -- one send-in per side per round; the sweep re-checks next turn
+      end
+    end
+  end
+  -- Collapse: one standing mon a side, both sides -- the engine's own 1v1
+  -- turn loop takes over from here, party rotation and all.
+  if livingCount(battle, "player") == 1 and livingCount(battle, "enemy") == 1 then
+    if battle.doubles.takeTurn then
+      battle.takeTurn = battle.doubles.engineTakeTurn
+      battle.doubles.takeTurn = nil
+      battle.collapsed = true
+      Runtime.emit("battle.doubles_collapsed", { battle = battle })
+    end
+  end
+end
+
+-- The four-actor round.  `actions` = { player=?, player2=?, enemy=?, enemy2=? }
+-- with each a runTurn action table ({kind="move", move=, target=} |
+-- {kind="switch", index=} | {kind="skip"}); a slot's nil action is a skip.
+function M.takeTurn2v2(self, actions)
+  actions = actions or {}
+  if self.over then return self:takeEvents() end
+  local d = self.doubles
+  syncLeads(self)
+  self.turn = self.turn + 1
+  d.fainted = {}
+
+  local okB, BattleE = pcall(engine)
+  local BattleLocal = BattleE or Battle
+
+  -- BerserkGene, player slots then enemy slots, first turn out only.
+  for _, slot in ipairs(SLOTS) do
+    local mon = d[slot]
+    if mon then self:checkBerserkGene(mon) end
+  end
+  for _, slot in ipairs(SLOTS) do
+    local mon = d[slot]
+    if mon then self:volatile(mon).tookThisTurn = nil end
+  end
+  self.faintInterrupt = nil
+
+  -- Non-move arms first: switches and items resolve before any move, in
+  -- slot order (the cart's own "switch resolves first" rule, generalised).
+  local moveActions = {}
+  for _, slot in ipairs(SLOTS) do
+    local act = actions[slot]
+    local mon = d[slot]
+    if not mon or (mon.hp or 0) <= 0 then
+      -- an empty slot's action is dropped
+      act = nil
+    end
+    if act == nil and mon and (mon.hp or 0) > 0
+        and (slot == "enemy" or slot == "enemy2") then
+      -- no collected action for a standing foe slot: the AI picks, exactly
+      -- as the singles round does when the caller hands only the player
+      -- action.  An EMPTY slot still skips -- there is nobody to choose.
+      act = { kind = "move" }
+    end
+    act = act or { kind = "skip" }
+    if act.kind == "switch" then
+      if slot == "player" then
+        self:switch(tonumber(act.index) or 0)
+      elseif slot == "enemy" then
+        self:switchEnemy(tonumber(act.index) or 0)
+      elseif slot == "player2" or slot == "enemy2" then
+        -- Slot switch: stand the slot's mon in the engine's lead context,
+        -- run the engine's own switch primitive, read the replacement back.
+        local side = slot == "player2" and "player" or "enemy"
+        local lead = side == "player" and self.player or self.enemy
+        local leadIndex = side == "player" and self.playerIndex or self.enemyIndex
+        if side == "player" then
+          self.player, self.playerIndex = d[slot], d.index[slot]
+        else
+          self.enemy, self.enemyIndex = d[slot], d.index[slot]
+        end
+        if side == "player" then
+          self:switch(tonumber(act.index) or 0)
+          d[slot], d.index[slot] = self.player, self.playerIndex
+        else
+          self:switchEnemy(tonumber(act.index) or 0)
+          d[slot], d.index[slot] = self.enemy, self.enemyIndex
+        end
+        if side == "player" then
+          self.player, self.playerIndex = lead, leadIndex
+        else
+          self.enemy, self.enemyIndex = lead, leadIndex
+        end
+        Runtime.emit("battle.battler_switched", { battle = self,
+          side = slotSideRecord(self, slot), battler = d[slot] })
+        syncLeads(self)
+      end
+    elseif act.kind == "item" then
+      -- X-item happiness lands on whoever is out (runTurn's tail); the
+      -- item's own effect is the caller's to apply, exactly as in 1v1.
+      if slot == "player" or slot == "player2" then
+        self:cancelBide(d[slot])
+      end
+      moveActions[#moveActions + 1] = { slot = slot, mon = mon, act = act,
+        kind = "skip" }
+    elseif act.kind == "move" then
+      moveActions[#moveActions + 1] = { slot = slot, mon = mon, act = act,
+        kind = "move", move = act.move, target = act.target }
+    else
+      moveActions[#moveActions + 1] = { slot = slot, mon = mon, act = act,
+        kind = "skip" }
+    end
+  end
+
+  if Runtime.wants("battle.turn_started") then
+    Runtime.emit("battle.turn_started", { battle = self, turn = self.turn,
+      doubles = true, actions = actions })
+  end
+  self.turnOpen = true
+
+  -- RUN: a whole-battle arm.  Only meaningful against wild foes; the failed
+  -- roll costs the turn exactly as the singles round does.
+  if (actions.player and actions.player.kind == "run") then
+    if self:tryRun() then return self:takeEvents() end
+    if self.runRefused then return self:takeEvents() end
+    -- the run consumed the player lead's action: drop it from the order
+    for i, ma in ipairs(moveActions) do
+      if ma.slot == "player" then ma.kind = "skip" end
+    end
+  end
+
+  -- Enemy move choice through the engine's own AI, one slot at a time: the
+  -- AI reads its attacker and the opposing lead off the battle, so each
+  -- enemy slot stands in that context while its move is picked.
+  for _, ma in ipairs(moveActions) do
+    if ma.kind == "move" and ma.mon and (ma.mon.hp or 0) > 0
+        and (ma.slot == "enemy" or ma.slot == "enemy2") and not ma.move then
+      local side, lead, leadIndex = "enemy", self.enemy, self.enemyIndex
+      self.enemy, self.enemyIndex = ma.mon, d.index[ma.slot]
+      -- The opposing lead the AI measures against: the player side's lead.
+      ma.move = self:enemyMove()
+      self.enemy, self.enemyIndex = lead, leadIndex
+    end
+  end
+
+  -- Order the moves: the engine's own priority, then effective speed, then
+  -- the same random tie the cart rolls.  The tie is rolled ONCE per actor
+  -- before the sort -- a comparator that rolls twice is not an order.
+  for _, ma in ipairs(moveActions) do
+    ma.tie = self:roller()(2)
+  end
+  table.sort(moveActions, function(a, b)
+    if a.kind ~= b.kind then return a.kind == "move" end
+    if a.kind ~= "move" then return a.slot < b.slot end
+    local pa = self:movePriority(a.move)
+    local pb = self:movePriority(b.move)
+    if pa ~= pb then return pa > pb end
+    local sa = self:effectiveSpeed(a.mon)
+    local sb = self:effectiveSpeed(b.mon)
+    if sa ~= sb then return sa > sb end
+    return a.tie < b.tie
+  end)
+
+  -- The attack phase.  A fainted attacker is skipped; the battle ending
+  -- (flee, wipe) stops the phase where it stands.
+  for _, ma in ipairs(moveActions) do
+    if self.over then break end
+    if ma.kind == "move" and ma.mon and (ma.mon.hp or 0) > 0 then
+      local defender, defSlot = defenderFor(self, ma, ma.target)
+      if defender then
+        if sweepFaints(self) then return self:takeEvents() end
+        attack(self, ma, defender)
+        if self.over then break end
+        if sweepFaints(self) then return self:takeEvents() end
+      end
+    end
+  end
+  if self.over then return self:takeEvents() end
+
+  -- End-of-round, in the cart's own order, per standing mon: weather once,
+  -- then status, seed/curse, wrap, held item, Future Sight, Perish, then
+  -- screens and counters.
+  self:tickWeather()
+  local d = self.doubles
+  local standing = actives(self)
+  for _, a in ipairs(standing) do
+    d.rewrite = (a.slot == "player2" and { player = "player2" })
+      or (a.slot == "enemy2" and { enemy = "enemy2" }) or nil
+    self:tickStatus(a.mon)
+    self:tickSeedAndCurse(a.mon)
+    self:tickWrap(a.mon)
+    self:tickHeldItem(a.mon)
+    self:tickFutureSight(a.mon)
+    self:tickPerish(a.mon)
+  end
+  d.rewrite = nil
+  self:tickScreens()
+  for _, a in ipairs(standing) do
+    d.rewrite = (a.slot == "player2" and { player = "player2" })
+      or (a.slot == "enemy2" and { enemy = "enemy2" }) or nil
+    self:tickCounters(a.mon)
+  end
+  d.rewrite = nil
+  if sweepFaints(self) then return self:takeEvents() end
+  sendInsAndCollapse(self)
+  return self:takeEvents()
+end
+
+-- Decorate an engine battle in place.  secondPlayer: a party mon (nil keeps
+-- the player side 1v1); secondEnemy: a mon for the foe's second slot.
+-- The second slots' party indexes are remembered so switches and the AI
+-- context swaps can restore the leads exactly.
+function M.decorate(battle, secondPlayer, secondEnemy)
+  engine()
+  local d = {
+    index = {},
+    fainted = {},
+    engineTakeTurn = battle.takeTurn,
+  }
+  battle.doubles = d
+  d.player, d.index.player = battle.player, battle.playerIndex
+  d.enemy, d.index.enemy = battle.enemy, battle.enemyIndex
+  d.player2 = secondPlayer
+  d.enemy2 = secondEnemy
+  if secondPlayer then
+    for i, mon in ipairs(battle.party or {}) do
+      if mon == secondPlayer then d.index.player2 = i end
+    end
+    d.index.player2 = d.index.player2 or 2
+  end
+  if secondEnemy then
+    for i, mon in ipairs(battle.enemyParty or {}) do
+      if mon == secondEnemy then d.index.enemy2 = i end
+    end
+    d.index.enemy2 = d.index.enemy2 or 2
+  end
+  battle.takeTurn = M.takeTurn2v2
+  battle.doubles.takeTurn = M.takeTurn2v2
+  battle.isDoubleBattle = true
+  if secondPlayer then
+    battle.participants[d.index.player2] = true
+  end
+  -- Slot context for events: while a slot-2 mon is the attacker or the
+  -- defender, events the engine stamps with the lead's side key are
+  -- rewritten to the slot's own key, so damage/heal/status land on the
+  -- right battler for anything consuming the event stream (the flat
+  -- screen today, the doubled HUD later).
+  local d2 = battle.doubles
+  local engineEmit = battle.emit
+  -- While a slot-2 mon is on either end of an effect, events the engine
+  -- stamps with the lead's side key are rewritten to the slot's own key.
+  d2.rewrite = nil
+  battle.emit = function(self, event)
+    local rw = d2.rewrite
+    if rw and event and rw[event.side] then event.side = rw[event.side] end
+    return engineEmit(self, event)
+  end
+  local engineUseMove = battle.useMove
+  battle.useMove = function(self, attacker, defender, moveId)
+    local rw = {}
+    if attacker == d2.player2 or defender == d2.player2 then
+      rw.player = "player2"
+    end
+    if attacker == d2.enemy2 or defender == d2.enemy2 then
+      rw.enemy = "enemy2"
+    end
+    d2.rewrite = rw
+    local events = engineUseMove(self, attacker, defender, moveId)
+    d2.rewrite = nil
+    return events
+  end
+  Runtime.emit("battle.doubles_started", { battle = battle,
+    player2 = secondPlayer, enemy2 = secondEnemy })
+  return battle
+end
+
+-- Is this battle currently running the layer's own rounds?
+function M.isActive(battle)
+  return battle and battle.doubles and battle.doubles.takeTurn ~= nil
+end
+
+return M

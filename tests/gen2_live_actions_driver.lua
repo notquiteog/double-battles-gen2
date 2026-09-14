@@ -4,7 +4,7 @@ return function(game)
  local U=dofile('tests/drivers/util.lua')
  if os.getenv('QA_2K')=='1' then love.window.setMode(2560,1440,{resizable=true});U.wait(20) end
  local V=game.mods.exports.BATTLE_ART_VOXEL_FORK.lib
- if os.getenv('QA_DEPTH_STYLE')=='1' then V.require('CommunityVisuals').crystalStyle:sync('depth') end
+ if os.getenv('QA_DEPTH_STYLE')=='1' then assert(V.require('CommunityVisuals').crystalDepth(game.world.map),'HD-2D must be default') end
  local stage=V.require('OverworldBattle')
  local Mon=require('src.battle.gen2.Mon')
  game.world.trySceneScript=function()return false end

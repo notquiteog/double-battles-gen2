@@ -55,8 +55,16 @@ function State:drawSceneBody()
  for i=1,3 do self:drawEnemyHud();self:drawPlayerHud();self:drawBottom(0);captures=captures+1 end
  capturing=false;afterFX=true
 end
-Hud.install(State)
+local modern=true
+Hud.install(State,function()return modern end)
 setmetatable(s,{__index=State});s.phase='menu'
 s:drawSceneBody()
 assert(captures==3 and not s.modernHudDeferred and depth==0,'animation capture state leaked')
 print('HUD excluded from repeated BG bakes and composed once after animation FX')
+
+s.battle.doubles=nil
+assert(Hud.active(s),'single battle must use modern layout')
+s:drawSceneBody()
+modern=false;assert(not Hud.active(s),'single battle opt-out failed')
+s.tutorial=true;modern=true;assert(not Hud.active(s),'tutorial layout must stay native')
+print('single battle modern layout, opt-out and tutorial guard passed')

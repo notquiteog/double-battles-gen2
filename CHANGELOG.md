@@ -1,3 +1,11 @@
+## [0.9.4] - the modern battle HUD becomes a setting and covers every battle
+
+- The Gen 2 modern battle HUD installs behind a MODERN BATTLE UI toggle
+  (on by default) and, when enabled, presents single battles too -- not
+  just doubles. The opt-out, the tutorial guard and the native prompt
+  fallback stay engine-owned; bounds, font DPI/cache, resize and the
+  repeated-BG-bake exclusion are pinned by the updated suite.
+
 ## 0.9.3 — 2026-09-14
 
 Add Crystal's missing opponent selector after move selection, with directional

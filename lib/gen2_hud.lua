@@ -2,6 +2,7 @@
 -- timing, damage animation and party/bag screens remain engine-owned.
 local M={}
 local font
+local allBattles
 local fonts={}
 local function text(value)
  return tostring(value or ''):gsub('<PK><MN>','POKEMON'):gsub('<LV>','Lv.')
@@ -37,7 +38,7 @@ local function guard(fn)
  if not ok then error(err,0) end
 end
 function M.active(s)
- return s.battle and s.battle.doubles and not s.tutorial
+ return s.battle and (s.battle.doubles or (allBattles and allBattles())) and not s.tutorial
 end
 local function card(s,slot,x,y,ally)
  local mon=s:activeMon(slot)
@@ -120,7 +121,8 @@ function M.drawBottom(s)
  end)
  return true
 end
-function M.install(State)
+function M.install(State, enabled)
+ allBattles=enabled
  if State.modernDoublesHudInstalled then return end
  State.modernDoublesHudInstalled=true
  State.usesModernDoublesHud=function(s)return M.active(s) end

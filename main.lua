@@ -26,6 +26,7 @@ return function(mod)
   end
 
   mod.options:define({
+    { key = "modern_hud", label = "MODERN BATTLE UI", type = "toggle", default = true },
     { key = "wild_doubles", label = "WILD DOUBLES", type = "choice",
       default = "sometimes",
       choices = { { "OFF", "off" }, { "SOMETIMES", "sometimes" },
@@ -2562,7 +2563,9 @@ return function(mod)
     if ok and State and source then
       local target=assert(mod:read("lib/gen2_target.lua"))
       assert(load(target,"@double_battles/lib/gen2_target.lua"))().install(State)
-      assert(load(source,"@double_battles/lib/gen2_hud.lua"))().install(State)
+      assert(load(source,"@double_battles/lib/gen2_hud.lua"))().install(State, function()
+        return mod.options:get("modern_hud") == true
+      end)
     end
   end
 

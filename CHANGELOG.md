@@ -1,3 +1,7 @@
+## 0.9.1 — 2026-09-13
+
+Place modern doubles HUD cards against the full window and cap desktop text/card size. Keep sharp display-resolution fonts; clear the handheld scissor only while drawing the modern panels and restore graphics state afterward. A 2560x1440 real battle verifies separate opponent cards, move rows, damage and survivor promotion. Native special prompts and input are retained.
+
 ## 0.9.0 — 2026-09-13
 
 Add compact modern Crystal doubles status panels, separate opponent HP bars, highlighted commands, move type/PP rows and dialogue. Rasterize fonts at the displayed panel scale for sharp text. Retain native input, HP animation and special prompts; the modern presentation continues after collapse to singles. Includes the 0.8.1 native-action damage and survivor fixes. Real two-Sentret battle screen, 39 core checks, HUD bounds/DPI/resize and native prompt fallback pass. Player-side pair command collection and explicit opponent selection remain future work.

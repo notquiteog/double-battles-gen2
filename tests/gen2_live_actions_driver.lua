@@ -2,6 +2,7 @@
 -- submit method, with current cart companions and native damage calculation.
 return function(game)
  local U=dofile('tests/drivers/util.lua')
+ if os.getenv('QA_2K')=='1' then love.window.setMode(2560,1440,{resizable=true});U.wait(20) end
  local Mon=require('src.battle.gen2.Mon')
  game.world.trySceneScript=function()return false end
  game.world.rollEncounter=function()return nil end

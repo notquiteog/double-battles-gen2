@@ -22,15 +22,16 @@ local function panel(x,y,w,h,selected)
 end
 local function guard(fn)
  local G=love.graphics
- G.push('all');G.setShader()
- -- The battle panel is expressed in GB coordinates but drawn under a large
- -- screen transform. Rasterize glyphs at that final scale, not at seven
- -- pixels followed by a fivefold enlargement of their antialiasing.
- local x,y=G.transformPoint(0,0)
- local xx,yy=G.transformPoint(1,0)
- local scale=math.max(1,math.ceil(math.sqrt((xx-x)^2+(yy-y)^2)))
- if not fonts[scale] then fonts[scale]=G.newFont(7,'normal',scale) end
- font=fonts[scale];G.setFont(font)
+ G.push('all');G.setShader();G.setScissor()
+ -- Use the full window for modern HUD placement, independently of the
+ -- centered 160x144 handheld panel. Cap physical card/text size on desktops.
+ local width,height=G.getDimensions()
+ local scale=math.max(1,math.min(4,width/320,height/240))
+ local dpi=math.ceil(scale)
+ G.origin();G.scale(scale,scale)
+ M.layout={width=width/scale,height=height/scale,scale=scale}
+ if not fonts[dpi] then fonts[dpi]=G.newFont(7,'normal',dpi) end
+ font=fonts[dpi];G.setFont(font)
  local ok,err=pcall(fn)
  G.pop()
  if not ok then error(err,0) end
@@ -48,7 +49,7 @@ local function card(s,slot,x,y,ally)
  label(s:name(mon),x+3,y+2,49)
  label('Lv.'..tostring(mon.level or 1),x+53,y+2,21)
  local status=s:statusTag(mon,slot)
- label(status or (ally and 'HP' or 'WILD'),x+3,y+11,20)
+ label(status or (ally and 'HP' or (s.battle.trainer and 'FOE' or 'WILD')),x+3,y+11,20)
  local G=love.graphics
  G.setColor(.20,.27,.29,1);G.rectangle('fill',x+24,y+12,48,3,1,1)
  if fraction>.5 then G.setColor(.20,.66,.46,1)
@@ -62,11 +63,11 @@ function M.drawSide(s,side)
   if not s:statusHUDVisible() or not s[side=='enemy' and 'showEnemyHud' or 'showPlayerHud']
      or s:hudCleared(side) then return end
   if side=='enemy' then
-   card(s,'enemy',2,2,false)
-   if s.battle.enemy2 then card(s,'enemy2',2,27,false) end
+   card(s,'enemy',6,6,false)
+   if s.battle.enemy2 then card(s,'enemy2',6,31,false) end
   else
-   card(s,'player',82,s.battle.player2 and 42 or 68,true)
-   if s.battle.player2 then card(s,'player2',82,70,true) end
+   card(s,'player',M.layout.width-82,M.layout.height-(s.battle.player2 and 106 or 78),true)
+   if s.battle.player2 then card(s,'player2',M.layout.width-82,M.layout.height-78,true) end
   end
  end)
 end
@@ -75,6 +76,7 @@ function M.drawBottom(s)
  if phase~='menu' and phase~='moves' and phase~='resolving' then return false end
  if not s:bottomUIVisible() then return true end
  guard(function()
+  love.graphics.translate((M.layout.width-160)/2,M.layout.height-148)
   panel(2,100,156,42)
   if phase=='menu' then
    for i,name in ipairs(s:menuLabels()) do

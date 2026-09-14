@@ -1,3 +1,12 @@
+## 0.9.2 — 2026-09-14
+
+Composite the modern doubles HUD once after native attack background effects.
+Keep the window-sized panels out of the 160×144 intermediate animation bake,
+which previously enlarged the UI into the centre of the battle. Preserve
+native prompts and restore the deferred flag after errors. Pair with Battle
+Art 1.17.0 for stage retention through KO/escape dialogue. HUD regression and
+native 1440p battle transition tests cover the change.
+
 ## 0.9.1 — 2026-09-13
 
 Place modern doubles HUD cards against the full window and cap desktop text/card size. Keep sharp display-resolution fonts; clear the handheld scissor only while drawing the modern panels and restore graphics state afterward. A 2560x1440 real battle verifies separate opponent cards, move rows, damage and survivor promotion. Native special prompts and input are retained.

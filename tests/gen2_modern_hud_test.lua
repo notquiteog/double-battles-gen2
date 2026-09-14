@@ -36,3 +36,24 @@ s.phase='moves';assert(Hud.drawBottom(s))
 s.phase='ask-nickname';assert(not Hud.drawBottom(s),'special prompt must retain native controls')
 assert(depth==0 and rects>15,'graphics state restored across every panel')
 print('modern HUD bounds, font DPI/cache, resize and native prompt fallback passed')
+-- Native scanline effects may bake the panel several times in a frame.
+-- No modern window-space UI may enter those 160x144 captures.
+local capturing=false
+local captures,afterFX=0,false
+local oldRect=G.rectangle
+G.rectangle=function(...)
+ assert(not capturing,'modern UI entered the small animation canvas')
+ assert(afterFX,'modern UI drawn before animation objects')
+ return oldRect(...)
+end
+local State={drawEnemyHud=function()end,drawPlayerHud=function()end,drawBottom=function()end}
+function State:drawSceneBody()
+ capturing=true
+ for i=1,3 do self:drawEnemyHud();self:drawPlayerHud();self:drawBottom(0);captures=captures+1 end
+ capturing=false;afterFX=true
+end
+Hud.install(State)
+setmetatable(s,{__index=State});s.phase='menu'
+s:drawSceneBody()
+assert(captures==3 and not s.modernHudDeferred and depth==0,'animation capture state leaked')
+print('HUD excluded from repeated BG bakes and composed once after animation FX')

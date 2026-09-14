@@ -117,14 +117,35 @@ function M.install(State)
   local name=side=='enemy' and 'drawEnemyHud' or 'drawPlayerHud'
   local old=State[name]
   State[name]=function(s,...)
-   if M.active(s) then return M.drawSide(s,side) end
+   if M.active(s) then
+    if not s.modernHudDeferred then return M.drawSide(s,side) end
+    return
+   end
    return old(s,...)
   end
  end
  local old=State.drawBottom
  State.drawBottom=function(s,...)
+  if M.active(s) and s.modernHudDeferred then return end
   if M.active(s) and M.drawBottom(s) then return end
   return old(s,...)
+ end
+ -- Animation BG effects bake the panel into 160x144 before enlarging it.
+ -- Keep window-space HUD out of that bake, then composite it once after FX.
+ local body=State.drawSceneBody
+ if body then
+  State.drawSceneBody=function(s,...)
+   if not M.active(s) then return body(s,...) end
+   local previous=s.modernHudDeferred
+   s.modernHudDeferred=true
+   local ok,result=pcall(body,s,...)
+   s.modernHudDeferred=previous
+   if not ok then error(result,0) end
+   if not previous then
+    s:drawEnemyHud();s:drawPlayerHud();s:drawBottom(0)
+   end
+   return result
+  end
  end
 end
 return M

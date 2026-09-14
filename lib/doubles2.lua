@@ -112,7 +112,8 @@ local function announceFaint(battle, slot)
     text = Strings(template, battle:monName(mon)) })
   Runtime.emit("battle.fainted", { battle = battle, battler = mon,
     side = slotSideRecord(battle, slot) })
-  battle:awardExperience(mon)
+  if wildText then battle:awardExperience(mon)
+  else battle:faintHappiness(mon) end
 end
 
 -- Every actor on `side` is down and no bench member stands ready: the
@@ -211,8 +212,8 @@ local function defenderFor(battle, actor, targetSlot)
   local d = battle.doubles
   local side = (actor.slot == "player" or actor.slot == "player2")
     and "enemy" or "player"
-  local order = targetSlot and { targetSlot }
-    or { side, side == "enemy" and "enemy2" or "player2" }
+  local other=side.."2"
+  local order = targetSlot==other and {other,side} or {side,other}
   for _, slot in ipairs(order) do
     local mon = d[slot]
     if mon and (mon.hp or 0) > 0 then return mon, slot end
@@ -243,6 +244,7 @@ local function sendInsAndCollapse(battle)
           if not (cur and (cur.hp or 0) > 0) then emptySlot = s break end
         end
         d[emptySlot] = mon
+        d.fainted[emptySlot] = nil
         d.index[emptySlot] = nextIndex
         battle[emptySlot] = mon
         if emptySlot == side then
@@ -265,6 +267,21 @@ local function sendInsAndCollapse(battle)
   -- turn loop takes over from here, party rotation and all.
   if livingCount(battle, "player") == 1 and livingCount(battle, "enemy") == 1 then
     if battle.doubles.takeTurn then
+      -- Singles must inherit the SURVIVOR, not a fainted lead whose partner
+      -- is still hidden in slot 2. Keep references to the actual party mons.
+      for _,side in ipairs({"player","enemy"}) do
+        if not (d[side] and d[side].hp>0) then
+          battle[side],battle[side.."Index"]=d[side.."2"],d.index[side.."2"]
+          local mon=battle[side]
+          battle:emit({kind="send",side=side,mon=mon,replacement=true,
+            hp=mon.hp,status=mon.status or false,level=mon.level,
+            experience=mon.experience,text=Strings("%s steps forward!",battle:monName(mon))})
+        end
+        battle[side.."2"],d[side.."2"]=nil,nil
+      end
+      syncLeads(battle)
+      battle:syncSides()
+      battle.isDoubleBattle=false
       battle.takeTurn = battle.doubles.engineTakeTurn
       battle.doubles.takeTurn = nil
       battle.collapsed = true
@@ -278,11 +295,13 @@ end
 -- {kind="switch", index=} | {kind="skip"}); a slot's nil action is a skip.
 function M.takeTurn2v2(self, actions)
   actions = actions or {}
+  -- BattleState submits the native singles action shape. Explicit four-slot
+  -- callers remain supported, but a UI move must never become a silent skip.
+  if actions.kind then actions={player=actions} end
   if self.over then return self:takeEvents() end
   local d = self.doubles
   syncLeads(self)
   self.turn = self.turn + 1
-  d.fainted = {}
 
   local okB, BattleE = pcall(engine)
   local BattleLocal = BattleE or Battle
@@ -319,8 +338,10 @@ function M.takeTurn2v2(self, actions)
     if act.kind == "switch" then
       if slot == "player" then
         self:switch(tonumber(act.index) or 0)
+        syncLeads(self)
       elseif slot == "enemy" then
         self:switchEnemy(tonumber(act.index) or 0)
+        syncLeads(self)
       elseif slot == "player2" or slot == "enemy2" then
         -- Slot switch: stand the slot's mon in the engine's lead context,
         -- run the engine's own switch primitive, read the replacement back.
@@ -339,7 +360,7 @@ function M.takeTurn2v2(self, actions)
           self:switchEnemy(tonumber(act.index) or 0)
           d[slot], d.index[slot] = self.enemy, self.enemyIndex
         end
-        battle[side .. "2"] = d[slot]
+        self[side .. "2"] = d[slot]
         if side == "player" then
           self.player, self.playerIndex = lead, leadIndex
         else

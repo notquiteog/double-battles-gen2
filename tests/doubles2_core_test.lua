@@ -17,7 +17,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 local os = require("os")
 local T = require("tests.modkit")
 love = love or require("tests.love_stub")
-local Data = require("src.core.Data"); Data:load()
+-- Fixtures below are self-contained; no imported Gen 1 data is needed.
 
 local Battle = require("src.battle.gen2.Battle")
 local Mon = require("src.battle.gen2.Mon")
@@ -237,6 +237,44 @@ do -- run is a whole-battle arm that can fail and cost the turn
   -- which is exactly the whole-battle arm the 2v2 round promises.
   T.check(battle.over == true, "a successful wild run ends the battle")
   T.check(battle.outcome == "run", "outcome is a run")
+end
+
+do -- Native UI action shape must hit, then promote the surviving foe.
+  local battle, party, wild, wild2 = battleWith(true)
+  doubles2.decorate(battle, nil, wild2)
+  local before=wild.hp
+  battle:takeTurn({kind="move",move="TACKLE"})
+  T.check(wild.hp<before,"native screen action damages the wild lead")
+  wild.hp=1
+  battle:takeTurn({kind="move",move="TACKLE"})
+  T.eq(battle.enemy,wild2,"surviving second foe becomes the singles lead")
+  T.eq(battle.enemy2,nil,"promoted foe does not remain drawn twice")
+  T.check(battle.collapsed,"survivor returns to native singles")
+  local before2=wild2.hp
+  battle:takeTurn({kind="move",move="TACKLE"})
+  T.check(wild2.hp<before2,"native next turn damages the surviving foe")
+  for _,m in ipairs(battle.party) do
+    T.check(m==party[1] or m==party[2] or m==party[3],"no foreign party member")
+  end
+end
+
+do -- A faint can only draw a replacement from the owned party.
+  local battle,party,_,wild2=battleWith(true)
+  doubles2.decorate(battle,nil,wild2)
+  party[1].hp=1
+  battle:takeTurn({kind="skip"})
+  T.eq(battle.player,party[2],"fainted lead replaced by the actual owned bench mon")
+  T.eq(#battle.party,3,"replacement never adds a Pokemon")
+end
+
+do -- A one-mon party wipes instead of inventing a replacement.
+  local battle,party,_,wild2=battleWith(true)
+  party[3],party[2]=nil,nil
+  doubles2.decorate(battle,nil,wild2)
+  party[1].hp=1
+  battle:takeTurn({kind="skip"})
+  T.check(battle.over and battle.outcome=="lose","empty bench uses native loss outcome")
+  T.eq(#battle.party,1,"loss never adds a Pokemon")
 end
 
 T.finish("double battles gen2 core")

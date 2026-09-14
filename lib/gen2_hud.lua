@@ -45,7 +45,7 @@ local function card(s,slot,x,y,ally)
  local hp=math.max(0,s:hudHp(mon,slot))
  local maximum=mon.maxHp or (mon.stats and mon.stats.hp) or 1
  local fraction=math.min(1,hp/math.max(1,maximum))
- panel(x,y,76,ally and 26 or 22)
+ panel(x,y,76,ally and 26 or 22,s.phase=='db2_target' and s.doubleTargetSlot==slot)
  label(s:name(mon),x+3,y+2,49)
  label('Lv.'..tostring(mon.level or 1),x+53,y+2,21)
  local status=s:statusTag(mon,slot)
@@ -73,7 +73,7 @@ function M.drawSide(s,side)
 end
 function M.drawBottom(s)
  local phase=s.phase
- if phase~='menu' and phase~='moves' and phase~='resolving' then return false end
+ if phase~='menu' and phase~='moves' and phase~='resolving' and phase~='db2_target' then return false end
  if not s:bottomUIVisible() then return true end
  guard(function()
   love.graphics.translate((M.layout.width-160)/2,M.layout.height-148)
@@ -85,6 +85,17 @@ function M.drawBottom(s)
     panel(x,y,73,15,selected)
     -- Use the engine's labels/order so controller selection stays identical.
     label(name,x+5,y+3,64,selected and {1,1,1,1} or nil)
+   end
+  elseif phase=='db2_target' then
+   label('CHOOSE TARGET   A: Confirm   B: Back',7,102,146)
+   for i,slot in ipairs(s:doubleTargets()) do
+    local mon=s:activeMon(slot)
+    local x=5+(i-1)*77
+    local selected=s.doubleTargetSlot==slot
+    panel(x,114,73,24,selected)
+    local color=selected and {1,1,1,1} or nil
+    label(tostring(i)..': '..s:name(mon),x+3,116,67,color)
+    label('Lv.'..tostring(mon.level or 1)..'  HP '..tostring(s:hudHp(mon,slot)),x+3,127,67,color)
    end
   elseif phase=='moves' then
    for i,move in ipairs(s:playerMoves()) do

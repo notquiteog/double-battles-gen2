@@ -2372,15 +2372,41 @@ return function(mod)
       end
     end
   end
-  local capturedWorld = nil
+  local capturedStart, rollingWorld = nil, nil
   do
     local okW, World = pcall(require, "src.world.gen2.World")
     if okW and World and type(World.startBattle) == "function"
         and not World.doublesGen2StartWrap then
       local origStart = World.startBattle
+      local origRandom = World.tryWildEncounter
+      local origRoll = World.rollEncounter
+      if type(origRoll)=='function' then
+        World.rollEncounter=function(self,kind,terrain,...)
+          local roll=origRoll(self,kind,terrain,...)
+          if rollingWorld and rollingWorld.world==self and kind=='wild' and roll then
+            rollingWorld.terrain=terrain
+          end
+          return roll
+        end
+      end
+      if type(origRandom)=='function' then
+        World.tryWildEncounter=function(self,...)
+          local previous=rollingWorld
+          rollingWorld={world=self}
+          local result={pcall(origRandom,self,...)}
+          rollingWorld=previous
+          if not result[1] then error(result[2],0) end
+          return unpack(result,2)
+        end
+      end
       World.startBattle = function(self, opts, ...)
-        capturedWorld = self
-        return origStart(self, opts, ...)
+        local previous=capturedStart
+        capturedStart={world=self, opts=opts or {},
+          terrain=rollingWorld and rollingWorld.world==self and rollingWorld.terrain}
+        local result={pcall(origStart,self,opts,...)}
+        capturedStart=previous
+        if not result[1] then error(result[2],0) end
+        return unpack(result,2)
       end
       World.doublesGen2StartWrap = true
     end
@@ -2389,6 +2415,10 @@ return function(mod)
     mod.events:on("battle.started", function(ev)
       local battle = ev and ev.battle
       if not battle or battle.over or battle.doubles then return end
+      -- Link/Online+ constructs its own battle and attaches networking AFTER
+      -- Battle.new emits this event. Requiring a live World:startBattle scope
+      -- keeps that singles protocol untouched even before link flags exist.
+      if not capturedStart then return end
       if battle.roaming then return end -- roamers stay strictly 1v1
       if not mod.options:get("gen2_doubles") then return end
       local Gen2Mon = require("src.battle.gen2.Mon")
@@ -2409,12 +2439,23 @@ return function(mod)
       -- own wild mons carry them.
       local chance = doubleChance()
       if chance <= 0 then return end
-      local world = capturedWorld
+      -- Only native random step encounters may recruit a second wild foe.
+      -- Visible spawns, fishing, gifts, scripts and mod world APIs keep the
+      -- exact encounter their owner supplied, even with ALWAYS selected.
+      local start=capturedStart
+      if not (start and (start.terrain=='grass' or start.terrain=='water')) then return end
+      if start.opts.contest or start.opts.tutorial or start.opts.battleType then return end
+      if chance<1 and math.random()>=chance then return end
+      local world = start.world
       if not (world and world.map and world.encounters) then return end
       local okE, Encounter = pcall(require, "src.battle.gen2.Encounter")
       if not (okE and Encounter and Encounter.grassSlot) then return end
-      local okRoll, roll = pcall(Encounter.grassSlot, world.encounters,
-        world.map.id, world.tod, battle.random)
+      local okRoll, roll
+      if start.terrain=='water' then
+        okRoll,roll=pcall(Encounter.waterSlot,world.encounters,world.map.id,battle.random)
+      else
+        okRoll,roll=pcall(Encounter.grassSlot,world.encounters,world.map.id,world.tod,battle.random)
+      end
       if not (okRoll and type(roll) == "table" and roll.species) then return end
       local Gen2Mon = require("src.battle.gen2.Mon")
       local okMon, secondMon = pcall(Gen2Mon.new, battle.data,
@@ -2519,6 +2560,8 @@ return function(mod)
     local ok, State=pcall(require,"src.ui.gen2.BattleState")
     local source=mod:read("lib/gen2_hud.lua")
     if ok and State and source then
+      local target=assert(mod:read("lib/gen2_target.lua"))
+      assert(load(target,"@double_battles/lib/gen2_target.lua"))().install(State)
       assert(load(source,"@double_battles/lib/gen2_hud.lua"))().install(State)
     end
   end

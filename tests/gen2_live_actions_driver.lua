@@ -7,6 +7,15 @@ return function(game)
  if os.getenv('QA_DEPTH_STYLE')=='1' then assert(V.require('CommunityVisuals').crystalDepth(game.world.map),'HD-2D must be default') end
  local stage=V.require('OverworldBattle')
  local Mon=require('src.battle.gen2.Mon')
+ local Doubles=dofile((os.getenv('DOUBLE_MOD_PATH') or 'mods/double_battles')..'/lib/doubles2.lua')
+ -- Explicit pair fixture: production mod-owned encounters must stay singles.
+ game.mods.events:on('battle.started',function(ev)
+  local b=ev and ev.battle
+  if b and not b.trainer and not b.doubles then
+   local second=Mon.new(game.data,'SENTRET',3)
+   b.enemyParty[2]=second;Doubles.decorate(b,nil,second)
+  end
+ end)
  game.world.trySceneScript=function()return false end
  game.world.rollEncounter=function()return nil end
  game.mods.modOptions.double_battles={wild_doubles='always',gen2_doubles=true}
@@ -44,7 +53,7 @@ return function(game)
  assert(U.shot(game,assert(os.getenv('SHOT_DIR'))..'/doubles_moves.png'))
  screen.phase='menu'
  local before=enemy.hp
- screen:submit({kind='move',move='TACKLE'})
+ screen:submit({kind='move',move='TACKLE',target='enemy'})
  assert(enemy.hp<before,'native screen attack was skipped')
  print('[doubles live] native submit damage',before,enemy.hp)
  local animationShot=false
@@ -62,7 +71,7 @@ return function(game)
  end
  assert(screen.phase=='menu','first attack did not return to menu')
  enemy.hp=1
- screen:submit({kind='move',move='TACKLE'})
+ screen:submit({kind='move',move='TACKLE',target='enemy'})
  assert(enemy.hp==0 and b.enemy==partner and b.enemy2==nil,'surviving foe not promoted')
  for _=1,1800 do if screen.phase=='menu' or b.over then break end U.tap(game,'a');U.wait(3) end
  assert(#game.save.party==1 and game.save.party[1]==lead,'battle injected a party member')
@@ -71,7 +80,7 @@ return function(game)
   assert(animationShot,'attack animation was not sampled')
   for _=1,1800 do if screen.phase=='menu' then break end U.tap(game,'a');U.wait(3) end
   b.enemy.hp=1
-  screen:submit({kind='move',move='TACKLE'})
+  screen:submit({kind='move',move='TACKLE',target='enemy'})
   assert(b.over,'finishing attack did not end battle')
   U.wait(3)
   assert(stage.arena() and stage.battle()==b,'stage released before result messages')

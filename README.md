@@ -91,22 +91,22 @@ Pokémon is a trademark of Nintendo; the Gen 1 games are © Nintendo /
 Creatures Inc. / GAME FREAK inc. Unofficial fan mod; no ROMs, no
 copyrighted game content. See the repository NOTICE.md.
 
-## Crystal 2v2 (this fork)
+## Crystal doubles (this fork)
 
-The Gen 1 mod above is unchanged. This fork adds what the stock mod could
-not do: real two-a-side battles on Crystal, run by the engine's own Gen 2
-battle sim — the same battle object the base game's stage renders, which
-the Battle Art voxel fork stages on the diorama.
+Crystal uses the native Gen 2 battle simulator with a doubles turn adapter.
+Both opponents render with individual HP cards. After choosing a move, select
+an opponent with the directional buttons, confirm with A, or cancel with B
+without spending PP. The selected opponent's status card is highlighted.
 
-`lib/doubles2.lua` decorates the engine's battle instance in place and
-drives four-actor rounds through the engine's own primitives (useMove,
-priority, effective speed, experience, residuals). Trainer 2v2 fields the
-trainer's second able mon; wild doubles roll the second foe from the map's
-own table through the engine's `World:rollWild`. When the fight comes back
-down to 1v1 the engine's own turn loop takes over, stock.
+Automatic wild doubles apply only to ordinary native random step encounters,
+using that map's grass or water table. Visible overworld spawns, fishing,
+scripted/special encounters, and battles supplied by other mods retain their
+original Pokémon. ALWAYS does not override those boundaries. Trainer doubles
+use the trainer's existing party. A surviving 1v1 returns to native singles.
 
-Beta limits, before the presentation chunk lands: the second foe's HP
-plate and sprite do not render yet (its attacks, its text and your damage
-against it all do), the player-side partner and aim menu are next, and
-Battle Art gets a second voxel anchor with them. Turn CRYSTAL 2V2 (BETA)
-on in Mod Settings to try it.
+The four-slot simulation exists, but normal Crystal UI still commands one
+player-side active Pokémon; collecting both allies' commands is unfinished.
+Spread-move parity and the full set of doubles interactions are not certified.
+Online+ and native link battles remain singles: their protocol has no doubles
+command/target exchange, and automatic doubles must not modify them. Local
+simulation checks are not a two-computer Internet multiplayer verification.

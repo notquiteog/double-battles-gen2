@@ -33,6 +33,9 @@ Hud.drawSide(s,'enemy');Hud.drawSide(s,'player');assert(Hud.drawBottom(s))
 assert(requested[1]==4 and #requested==1,'font rasterization must match displayed scale and be cached')
 width,height=960,720;Hud.drawSide(s,'enemy');assert(requested[2]==3,'font follows display resize')
 s.phase='moves';assert(Hud.drawBottom(s))
+s.phase='db2_target';s.doubleTargetSlot='enemy2'
+function s:doubleTargets()return {'enemy','enemy2'} end
+assert(Hud.drawBottom(s));Hud.drawSide(s,'enemy')
 s.phase='ask-nickname';assert(not Hud.drawBottom(s),'special prompt must retain native controls')
 assert(depth==0 and rects>15,'graphics state restored across every panel')
 print('modern HUD bounds, font DPI/cache, resize and native prompt fallback passed')

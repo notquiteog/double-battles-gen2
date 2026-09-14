@@ -1,3 +1,19 @@
+## 0.9.3 — 2026-09-14
+
+Add Crystal's missing opponent selector after move selection, with directional
+navigation, A to confirm, B to cancel, highlighted HUD and no PP/turn spent
+before confirmation. Native tests damage each selected foe separately.
+
+Only native random step encounters can automatically add a wild partner;
+visible spawns and other mod/special encounters retain the supplied mon.
+Use the matching grass/water table and honor SOMETIMES's 30% chance. Scope the
+origin to the current start call, and keep Online+/link battle construction
+outside automatic trainer doubles even before networking flags are attached.
+
+Camera dialogue/cutscene changes ship separately in Battle Art1.19.1. Full
+player-side pair commands, doubles network exchange, and exhaustive mechanical
+parity remain unfinished; multiplayer stays singles.
+
 ## 0.9.2 — 2026-09-14
 
 Composite the modern doubles HUD once after native attack background effects.

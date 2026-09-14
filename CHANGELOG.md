@@ -1,3 +1,7 @@
+## 0.9.0 — 2026-09-13
+
+Add compact modern Crystal doubles status panels, separate opponent HP bars, highlighted commands, move type/PP rows and dialogue. Rasterize fonts at the displayed panel scale for sharp text. Retain native input, HP animation and special prompts; the modern presentation continues after collapse to singles. Includes the 0.8.1 native-action damage and survivor fixes. Real two-Sentret battle screen, 39 core checks, HUD bounds/DPI/resize and native prompt fallback pass. Player-side pair command collection and explicit opponent selection remain future work.
+
 ## 0.8.1 — 2026-09-13
 
 Fix Crystal's native single-action battle UI being ignored by the doubles turn adapter. Selected moves now deal native damage. Promote the actual surviving foe when returning to singles, clear the duplicate second slot, retain faint announcements across rounds, award faint experience only for opponents, and fix slot-2 switch assignment. 39 native-core checks and a real battle-screen submit/promotion check passed. Party loss/replacement checks admit only the existing owned party. Player-side command collection and explicit aim selection remain future work.

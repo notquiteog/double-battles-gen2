@@ -2515,4 +2515,12 @@ return function(mod)
 
   mod.log:info("crystal 2v2 core loaded (beta presentation: %s)",
                tostring(mod.options:get("gen2_doubles")))
+  if doubles2Gen2 then
+    local ok, State=pcall(require,"src.ui.gen2.BattleState")
+    local source=mod:read("lib/gen2_hud.lua")
+    if ok and State and source then
+      assert(load(source,"@double_battles/lib/gen2_hud.lua"))().install(State)
+    end
+  end
+
 end

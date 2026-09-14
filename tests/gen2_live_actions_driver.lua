@@ -16,7 +16,12 @@ return function(game)
  for _,obj in ipairs(game.world.maps.NEW_BARK_TOWN.objects or {}) do
   assert(obj.name~='DSR_GEN2_TEST_GIVER','test gift NPC shipped')
  end
+ -- Force a same-species encounter fixture to catch overlapping pair art.
+ local Encounter=require('src.battle.gen2.Encounter')
+ local roll=Encounter.grassSlot
+ Encounter.grassSlot=function()return {species='SENTRET',level=3} end
  assert(game.world:startBattle({wild=Mon.new(game.data,'SENTRET',8)}))
+ Encounter.grassSlot=roll
  local screen
  for _=1,1800 do
   screen=game.stack:top()
@@ -28,6 +33,14 @@ return function(game)
  assert(b.enemy2,'encounter did not decorate')
  b.random=function(n)return n>1 and 1 or 0 end
  local enemy,partner=b.enemy,b.enemy2
+ assert(screen:usesModernDoublesHud(),'modern doubles HUD not installed')
+ local staged=game.mods.exports.BATTLE_ART_VOXEL_FORK.lib.require('Gen2Staged')
+ U.wait(10)
+ assert(staged.drawn.enemy==enemy and staged.drawn.enemy2==partner,'both staged bodies must render')
+ assert(U.shot(game,assert(os.getenv('SHOT_DIR'))..'/doubles_menu.png'))
+ screen.phase='moves';screen.moveIndex=1
+ assert(U.shot(game,assert(os.getenv('SHOT_DIR'))..'/doubles_moves.png'))
+ screen.phase='menu'
  local before=enemy.hp
  screen:submit({kind='move',move='TACKLE'})
  assert(enemy.hp<before,'native screen attack was skipped')

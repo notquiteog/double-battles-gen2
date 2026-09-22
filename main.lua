@@ -2561,6 +2561,9 @@ return function(mod)
 
   mod.log:info("crystal 2v2 core loaded (beta presentation: %s)",
                tostring(mod.options:get("gen2_doubles")))
+  if doubles2Gen2 and require("src.core.GameVersion").generation()==2 then
+    mod.exports.online=assert(load(assert(mod:read("lib/gen2_online.lua")),"@doubles/gen2_online"))()(doubles2Gen2)
+  end
   if doubles2Gen2 then
     local ok, State=pcall(require,"src.ui.gen2.BattleState")
     local source=mod:read("lib/gen2_hud.lua")

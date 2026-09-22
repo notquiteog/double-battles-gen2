@@ -1,3 +1,9 @@
+**0.11.0: Crystal online paired turns.** Adds an optional Crystal link provider for Online rooms: two owned Pokemon per side, explicit target selection, paired commands, deterministic mirrored ordering, native battle effects and cloned-party restoration. Partner actions and speed use independent native stat contexts; empty online slots refill from the bench.
+
+Known limits: Gen 1 online doubles are not implemented. Crystal doubles remain experimental; advanced move-effect combinations and the full disconnect matrix have not been exhaustively verified. FireRed/LeafGreen continue using the native doubles engine.
+
+Requires Gen1Recomp 0.3.1 for the verified Gen 3 path. Other mods are optional; no ROM, player save or import cache is included.
+
 **0.10.0: Native Gen 3 doubles and restored settings.** Adds a native Gen 3 double-battle adapter and optional Online integration. Preserves native trainer double battles and exact visible-spawn encounters. Restores independent in-game settings in GB and Gen 3.
 
 Gen 1/2 online doubles are not implemented. Local Gen 1/2 doubles and native Gen 3 doubles remain separate paths.

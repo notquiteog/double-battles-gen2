@@ -16,7 +16,7 @@ function M.install(State)
  function State:doubleTargets() return M.targets(self.battle) end
  function State:submit(action)
   local b=self.battle
-  if b and b.doubles and b.doubles.takeTurn and not b.over and not self.link
+  if b and b.doubles and b.doubles.takeTurn and not b.over and (not self.link or self.doubleLink)
       and action and action.kind=='move' and not action.target then
    local targets=self:doubleTargets()
    if #targets>1 then

@@ -45,6 +45,40 @@ local function engine()
 end
 
 local SLOTS = { "player", "player2", "enemy", "enemy2" }
+local MIRROR_SLOTS = { "enemy", "enemy2", "player", "player2" }
+local function slotOrder(battle)return battle.linkBattle and battle.mirrored and MIRROR_SLOTS or SLOTS end
+
+-- Native effects index the two active lead contexts. Bind the relevant
+-- slots while an action runs, including separate stages for each partner.
+local function slotOf(b,mon)
+ for _,key in ipairs(SLOTS)do if mon and b.doubles[key]==mon then return key end end
+end
+local function context(b,first,second,fn)
+ local d=b.doubles
+ local pk,ek='player','enemy'
+ for _,key in ipairs({first or '',second or ''})do
+  if key=='player'or key=='player2'then pk=key elseif key=='enemy'or key=='enemy2'then ek=key end
+ end
+ local op,oe=b.player,b.enemy
+ local opk,oek=slotOf(b,op),slotOf(b,oe)
+ local pi,ei=b.playerIndex,b.enemyIndex
+ local ps,es=b.stages.player,b.stages.enemy
+ local rewrite=d.rewrite
+ b.player,b.enemy=d[pk],d[ek];b.playerIndex,b.enemyIndex=d.index[pk],d.index[ek]
+ b.stages.player,b.stages.enemy=d.stages[pk],d.stages[ek]
+ d.rewrite={player=pk,enemy=ek}
+ local ok,result=pcall(fn)
+ d[pk],d[ek]=b.player,b.enemy;d.index[pk],d.index[ek]=b.playerIndex,b.enemyIndex
+ d.stages[pk],d.stages[ek]=b.stages.player,b.stages.enemy
+ b.player2,b.enemy2=d.player2,d.enemy2
+ b.player,b.enemy=opk and d[opk]or op,oek and d[oek]or oe
+ b.playerIndex,b.enemyIndex=opk and d.index[opk]or pi,oek and d.index[oek]or ei
+ b.stages.player,b.stages.enemy=opk and d.stages[opk]or ps,oek and d.stages[oek]or es
+ b.stages.player2,b.stages.enemy2=d.stages.player2,d.stages.enemy2
+ d.rewrite=rewrite
+ if not ok then error(result,0)end
+ return result
+end
 
 -- The engine's own lead fields are the source of truth for slot 1; call
 -- after anything mutates them (switches, send-ins).
@@ -58,7 +92,7 @@ end
 local function actives(battle)
   local d = battle.doubles
   local out = {}
-  for _, slot in ipairs(SLOTS) do
+  for _, slot in ipairs(slotOrder(battle)) do
     local mon = d[slot]
     if mon and (mon.hp or 0) > 0 then out[#out + 1] = { slot = slot, mon = mon } end
   end
@@ -112,8 +146,8 @@ local function announceFaint(battle, slot)
     text = Strings(template, battle:monName(mon)) })
   Runtime.emit("battle.fainted", { battle = battle, battler = mon,
     side = slotSideRecord(battle, slot) })
-  if wildText then battle:awardExperience(mon)
-  else battle:faintHappiness(mon) end
+  if wildText and not battle.linkBattle then battle:awardExperience(mon)
+  elseif not wildText and not battle.linkBattle then battle:faintHappiness(mon) end
 end
 
 -- Every actor on `side` is down and no bench member stands ready: the
@@ -138,12 +172,12 @@ local function checkSideWipe(battle, side)
   else
     battle:emit({ kind = "message",
       text = Strings("%s was defeated!", battle.trainer and battle.trainer.name or "Foe") })
-    if battle.trainer then
+    if battle.trainer and not battle.linkBattle then
       battle:printWinLossText("win")
       battle:awardPrizeMoney()
     end
     local Prize = require("src.battle.gen2.Prize")
-    local coins = Prize.payDay(battle.save, battle.payDay, battle.amuletCoin)
+    local coins = not battle.linkBattle and Prize.payDay(battle.save, battle.payDay, battle.amuletCoin)
     battle.payDay = nil
     battle:endBattle("win")
   end
@@ -153,7 +187,7 @@ end
 -- Mid-round faint sweep: announce, pay out, end the battle if a side is
 -- wiped with no bench.  Returns true when the battle ended.
 local function sweepFaints(battle)
-  for _, slot in ipairs(SLOTS) do announceFaint(battle, slot) end
+  for _, slot in ipairs(slotOrder(battle)) do announceFaint(battle, slot) end
   if checkSideWipe(battle, "enemy") then return true end
   return checkSideWipe(battle, "player")
 end
@@ -189,7 +223,7 @@ local function attack(battle, actor, defender)
       text = Strings("%s's %s is DISABLED!", battle:monName(mon), moveName) })
     return
   end
-  if actor.slot == "player" or actor.slot == "player2" then
+  if not battle.linkBattle and (actor.slot == "player" or actor.slot == "player2") then
     -- CheckObedience: the cart runs it at the head of the move's effect
     -- list for the player's side.  The lead's roll is the engine's own
     -- (it reads the battle's player context); a partner rolls through the
@@ -226,16 +260,20 @@ end
 -- hands the battle back to the engine's own turn loop.
 local function sendInsAndCollapse(battle)
   local d = battle.doubles
-  for _, side in ipairs({ "player", "enemy" }) do
-    if livingCount(battle, side) == 0 and not battle.over then
+  local sides=battle.linkBattle and battle.mirrored and {"enemy","player"} or {"player","enemy"}
+  for _, side in ipairs(sides) do
+    if livingCount(battle, side) < (battle.linkBattle and 2 or 1) and not battle.over then
       local bench = side == "player" and battle.party or (battle.enemyParty or {})
       local used = {}
-      for _, slot in ipairs(SLOTS) do
+      for _, slot in ipairs(slotOrder(battle)) do
         local mon = d[slot]
         if mon then used[mon] = true end
       end
-      local nextIndex = Battle.firstHealthy(bench)
-      while nextIndex and not used[bench[nextIndex]] do
+      local function nextBench()
+        for i,mon in ipairs(bench)do if (mon.hp or 0)>0 and not used[mon] and not mon.isEgg then return i end end
+      end
+      local nextIndex=nextBench()
+      while nextIndex and livingCount(battle,side)<2 do
         local mon = bench[nextIndex]
         -- The first empty slot on this side takes the send-in.
         local emptySlot
@@ -244,6 +282,8 @@ local function sendInsAndCollapse(battle)
           if not (cur and (cur.hp or 0) > 0) then emptySlot = s break end
         end
         d[emptySlot] = mon
+        d.stages[emptySlot]=Battle.newStages()
+        battle.stages[emptySlot]=d.stages[emptySlot]
         d.fainted[emptySlot] = nil
         d.index[emptySlot] = nextIndex
         battle[emptySlot] = mon
@@ -259,13 +299,15 @@ local function sendInsAndCollapse(battle)
         Runtime.emit("battle.battler_switched", { battle = battle,
           side = slotSideRecord(battle, emptySlot), battler = mon })
         syncLeads(battle)
-        break -- one send-in per side per round; the sweep re-checks next turn
+        used[mon]=true
+        if not battle.linkBattle then break end
+        nextIndex=nextBench()
       end
     end
   end
   -- Collapse: one standing mon a side, both sides -- the engine's own 1v1
   -- turn loop takes over from here, party rotation and all.
-  if livingCount(battle, "player") == 1 and livingCount(battle, "enemy") == 1 then
+  if not battle.linkBattle and livingCount(battle, "player") == 1 and livingCount(battle, "enemy") == 1 then
     if battle.doubles.takeTurn then
       -- Singles must inherit the SURVIVOR, not a fainted lead whose partner
       -- is still hidden in slot 2. Keep references to the actual party mons.
@@ -307,11 +349,11 @@ function M.takeTurn2v2(self, actions)
   local BattleLocal = BattleE or Battle
 
   -- BerserkGene, player slots then enemy slots, first turn out only.
-  for _, slot in ipairs(SLOTS) do
+  for _, slot in ipairs(slotOrder(self)) do
     local mon = d[slot]
     if mon then self:checkBerserkGene(mon) end
   end
-  for _, slot in ipairs(SLOTS) do
+  for _, slot in ipairs(slotOrder(self)) do
     local mon = d[slot]
     if mon then self:volatile(mon).tookThisTurn = nil end
   end
@@ -320,7 +362,7 @@ function M.takeTurn2v2(self, actions)
   -- Non-move arms first: switches and items resolve before any move, in
   -- slot order (the cart's own "switch resolves first" rule, generalised).
   local moveActions = {}
-  for _, slot in ipairs(SLOTS) do
+  for _, slot in ipairs(slotOrder(self)) do
     local act = actions[slot]
     local mon = d[slot]
     if not mon or (mon.hp or 0) <= 0 then
@@ -421,19 +463,19 @@ function M.takeTurn2v2(self, actions)
   -- Order the moves: the engine's own priority, then effective speed, then
   -- the same random tie the cart rolls.  The tie is rolled ONCE per actor
   -- before the sort -- a comparator that rolls twice is not an order.
-  for _, ma in ipairs(moveActions) do
-    ma.tie = self:roller()(2)
+  for i, ma in ipairs(moveActions) do
+    ma.tie = self:roller()(2);ma.order=i
+    ma.priority=ma.kind=="move" and self:movePriority(ma.move) or 0;ma.speed=ma.mon and self:effectiveSpeed(ma.mon) or 0
   end
   table.sort(moveActions, function(a, b)
     if a.kind ~= b.kind then return a.kind == "move" end
     if a.kind ~= "move" then return a.slot < b.slot end
-    local pa = self:movePriority(a.move)
-    local pb = self:movePriority(b.move)
+    local pa, pb = a.priority, b.priority
     if pa ~= pb then return pa > pb end
-    local sa = self:effectiveSpeed(a.mon)
-    local sb = self:effectiveSpeed(b.mon)
+    local sa, sb = a.speed, b.speed
     if sa ~= sb then return sa > sb end
-    return a.tie < b.tie
+    if a.tie ~= b.tie then return a.tie < b.tie end
+    return a.order < b.order
   end)
 
   -- The attack phase.  A fainted attacker is skipped; the battle ending
@@ -444,7 +486,7 @@ function M.takeTurn2v2(self, actions)
       local defender, defSlot = defenderFor(self, ma, ma.target)
       if defender then
         if sweepFaints(self) then return self:takeEvents() end
-        attack(self, ma, defender)
+        context(self,ma.slot,defSlot,function()return attack(self,ma,defender)end)
         if self.over then break end
         if sweepFaints(self) then return self:takeEvents() end
       end
@@ -461,19 +503,21 @@ function M.takeTurn2v2(self, actions)
   for _, a in ipairs(standing) do
     d.rewrite = (a.slot == "player2" and { player = "player2" })
       or (a.slot == "enemy2" and { enemy = "enemy2" }) or nil
+    context(self,a.slot,nil,function()
     self:tickStatus(a.mon)
     self:tickSeedAndCurse(a.mon)
     self:tickWrap(a.mon)
     self:tickHeldItem(a.mon)
     self:tickFutureSight(a.mon)
     self:tickPerish(a.mon)
+    end)
   end
   d.rewrite = nil
   self:tickScreens()
   for _, a in ipairs(standing) do
     d.rewrite = (a.slot == "player2" and { player = "player2" })
       or (a.slot == "enemy2" and { enemy = "enemy2" }) or nil
-    self:tickCounters(a.mon)
+    context(self,a.slot,nil,function()self:tickCounters(a.mon)end)
   end
   d.rewrite = nil
   if sweepFaints(self) then return self:takeEvents() end
@@ -493,6 +537,8 @@ function M.decorate(battle, secondPlayer, secondEnemy)
     engineTakeTurn = battle.takeTurn,
   }
   battle.doubles = d
+  d.stages={player=battle.stages.player,enemy=battle.stages.enemy,player2=Battle.newStages(),enemy2=Battle.newStages()}
+  battle.stages.player2,battle.stages.enemy2=d.stages.player2,d.stages.enemy2
   d.player, d.index.player = battle.player, battle.playerIndex
   d.enemy, d.index.enemy = battle.enemy, battle.enemyIndex
   d.player2 = secondPlayer
@@ -537,17 +583,13 @@ function M.decorate(battle, secondPlayer, secondEnemy)
   end
   local engineUseMove = battle.useMove
   battle.useMove = function(self, attacker, defender, moveId)
-    local rw = {}
-    if attacker == d2.player2 or defender == d2.player2 then
-      rw.player = "player2"
-    end
-    if attacker == d2.enemy2 or defender == d2.enemy2 then
-      rw.enemy = "enemy2"
-    end
-    d2.rewrite = rw
-    local events = engineUseMove(self, attacker, defender, moveId)
-    d2.rewrite = nil
-    return events
+    return context(self,slotOf(self,attacker),slotOf(self,defender),function()
+      return engineUseMove(self,attacker,defender,moveId)
+    end)
+  end
+  local engineSpeed=battle.effectiveSpeed
+  battle.effectiveSpeed=function(self,mon)
+    return context(self,slotOf(self,mon),nil,function()return engineSpeed(self,mon)end)
   end
   Runtime.emit("battle.doubles_started", { battle = battle,
     player2 = secondPlayer, enemy2 = secondEnemy })

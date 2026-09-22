@@ -277,4 +277,21 @@ do -- A one-mon party wipes instead of inventing a replacement.
   T.eq(#battle.party,1,"loss never adds a Pokemon")
 end
 
+do
+ local battle,party,_,wild2=battleWith(true)
+ doubles2.decorate(battle,party[2],wild2)
+ local raw=battle:effectiveSpeed(party[2])
+ battle.doubles.stages.player2.speed=2
+ T.check(battle:effectiveSpeed(party[2])>raw,"partner speed uses its own stages")
+ T.eq(battle.stages.player.speed,0,"partner speed does not alter lead stages")
+ local native=battle.sideOf
+ local effect=battle.applyDamage
+ local seen
+ -- Native useMove reads self:sideOf during its effect path.
+ battle.sideOf=function(self,m)if m==party[2]then seen=native(self,m)end;return native(self,m)end
+ battle:useMove(party[2],wild2,'TACKLE')
+ T.eq(seen,'player',"partner move gets the correct native side context")
+ T.eq(battle.player,party[1],"lead restored after partner effect")
+end
+
 T.finish("double battles gen2 core")

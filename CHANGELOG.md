@@ -1,3 +1,9 @@
+## 0.10.0 — 2026-09-22
+
+Adds a native Gen 3 double-battle adapter and optional Online integration. Preserves native trainer double battles and exact visible-spawn encounters. Restores independent in-game settings in GB and Gen 3.
+
+Known limits: Gen 1/2 online doubles are not implemented. Local Gen 1/2 doubles and native Gen 3 doubles remain separate paths.
+
 ## Unreleased — in-game settings
 
 Add independent native FireRed/LeafGreen OPTIONS pages and missing Gen 1/2 settings rows; preserve stored values and emit option changes. Tested on Gen1Recomp 0.3.0.

@@ -1,3 +1,7 @@
+**0.10.0: Native Gen 3 doubles and restored settings.** Adds a native Gen 3 double-battle adapter and optional Online integration. Preserves native trainer double battles and exact visible-spawn encounters. Restores independent in-game settings in GB and Gen 3.
+
+Gen 1/2 online doubles are not implemented. Local Gen 1/2 doubles and native Gen 3 doubles remain separate paths.
+
 # Double Battles
 
 Wild and trainer battles against two Pokémon at once: 1v2, full 2v2,

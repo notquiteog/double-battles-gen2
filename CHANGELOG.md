@@ -1,3 +1,15 @@
+## 0.9.5 — 2026-09-22 — overhead status cards with Battle Art
+
+Consume Battle Art's public head-anchor/theme exports for independent silver
+status cards above each staged Pokemon and colored lower-right commands.
+Use the shared crisp pixel face and clean PKMN/ITEMS labels. Retain the native
+input order, target selector, animation capture isolation, opt-out and fallback
+when Battle Art is absent. No battle mechanics or networking changes.
+
+Verified on actual Gen1Recomp0.2.73 at2560x1440: singles and two-Sentret staged
+battles, separate overhead cards, move selection and damage to the selected
+second foe. This is presentation QA, not complete doubles/multiplayer parity.
+
 ## [0.9.4] - the modern battle HUD becomes a setting and covers every battle
 
 - The Gen 2 modern battle HUD installs behind a MODERN BATTLE UI toggle

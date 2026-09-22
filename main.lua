@@ -2565,6 +2565,15 @@ return function(mod)
       assert(load(target,"@double_battles/lib/gen2_target.lua"))().install(State)
       assert(load(source,"@double_battles/lib/gen2_hud.lua"))().install(State, function()
         return mod.options:get("modern_hud") == true
+      end, function()
+        local provider=mod.find("BATTLE_ART_VOXEL_FORK")
+        local ex=provider and provider.exports
+        return ex and ex.battleTheme
+      end, function(slot)
+        local provider=mod.find("BATTLE_ART_VOXEL_FORK")
+        local ex=provider and provider.exports
+        local p=ex and ex.battlePresentation
+        if p and p.hudAnchor then return p.hudAnchor(slot) end
       end)
     end
   end

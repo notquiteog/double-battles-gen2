@@ -68,3 +68,24 @@ s:drawSceneBody()
 modern=false;assert(not Hud.active(s),'single battle opt-out failed')
 s.tutorial=true;modern=true;assert(not Hud.active(s),'tutorial layout must stay native')
 print('single battle modern layout, opt-out and tutorial guard passed')
+
+-- A staged provider owns projection; every live slot must use its own head,
+-- not the old corner anchors. The public theme handles native text tokens.
+local anchors,buttons,labels={},{},{}
+local theme={apiVersion=1,ink={.2,.2,.2,1},panel=function()end,
+ aboveHead=function(x,y,w,h)return x-w/2,y-h-10 end,
+ statusCard=function(x,y,w,h,tip)anchors[#anchors+1]={x=x,y=y,tip=tip}end,
+ button=function(x,y,w,h,kind)buttons[#buttons+1]=kind end,
+ text=function(s)labels[#labels+1]=s end,
+ hpColor=function()return .1,.7,.2,1 end}
+Hud.install(State,function()return true end,function()return theme end,function(slot)
+ return ({player=300,player2=600,enemy=1200,enemy2=1800})[slot],400
+end)
+width,height=2560,1440;s.tutorial=false;s.battle.doubles={};s.battle.player2=mon
+s.phase='menu';s:drawSceneBody()
+assert(#anchors==4,'not all four heads received independent cards')
+assert(anchors[1].tip==300 and anchors[2].tip==450 and anchors[3].tip==75 and anchors[4].tip==150)
+assert(table.concat(buttons,',')=='fight,pokemon,bag,run','semantic command order changed')
+assert(table.concat(labels,','):find('PKMN',1,true),'native Pokemon formatting escaped into UI')
+assert(depth==0)
+print('public theme/anchor providers: four independent overhead cards, command order and clean labels passed')

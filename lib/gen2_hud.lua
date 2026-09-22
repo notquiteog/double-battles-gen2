@@ -3,6 +3,8 @@
 local M={}
 local font
 local allBattles
+local themeProvider
+local anchorProvider
 local fonts={}
 local function text(value)
  return tostring(value or ''):gsub('<PK><MN>','POKEMON'):gsub('<LV>','Lv.')
@@ -10,11 +12,16 @@ local function text(value)
 end
 local function label(value,x,y,width,color)
  local G=love.graphics
+ local theme=themeProvider and themeProvider()
+ if theme and theme.text then return theme.text(value,x,y,width,color)end
  local s=text(value)
  if width then while #s>0 and font:getWidth(s)>width do s=s:sub(1,-2) end end
- G.setColor(unpack(color or {.13,.19,.22,1}));G.print(s,x,y)
+ local theme=themeProvider and themeProvider()
+ G.setColor(unpack(theme and theme.ink or color or {.13,.19,.22,1}));G.print(s,x,y)
 end
 local function panel(x,y,w,h,selected)
+ local theme=themeProvider and themeProvider()
+ if theme and theme.apiVersion==1 and theme.panel then return theme.panel(x,y,w,h,selected)end
  local G=love.graphics
  G.setColor(.06,.10,.12,.22);G.rectangle('fill',x+.5,y+1,w,h,2,2)
  G.setColor(selected and .14 or .88,selected and .39 or .92,selected and .34 or .90,1)
@@ -46,14 +53,22 @@ local function card(s,slot,x,y,ally)
  local hp=math.max(0,s:hudHp(mon,slot))
  local maximum=mon.maxHp or (mon.stats and mon.stats.hp) or 1
  local fraction=math.min(1,hp/math.max(1,maximum))
- panel(x,y,76,ally and 26 or 22,s.phase=='db2_target' and s.doubleTargetSlot==slot)
+ local theme=themeProvider and themeProvider()
+ local ax,ay
+ if anchorProvider then ax,ay=anchorProvider(slot)end
+ if ax and ay and theme and theme.aboveHead then
+  ax,ay=ax/M.layout.scale,ay/M.layout.scale
+  x,y=theme.aboveHead(ax,ay,76,ally and 26 or 22,M.layout.width,M.layout.height)
+  theme.statusCard(x,y,76,ally and 26 or 22,ax,s.phase=='db2_target' and s.doubleTargetSlot==slot)
+ else panel(x,y,76,ally and 26 or 22,s.phase=='db2_target' and s.doubleTargetSlot==slot)end
  label(s:name(mon),x+3,y+2,49)
  label('Lv.'..tostring(mon.level or 1),x+53,y+2,21)
  local status=s:statusTag(mon,slot)
- label(status or (ally and 'HP' or (s.battle.trainer and 'FOE' or 'WILD')),x+3,y+11,20)
+ label(status or (theme and 'HP' or ally and 'HP' or (s.battle.trainer and 'FOE' or 'WILD')),x+3,y+11,20)
  local G=love.graphics
  G.setColor(.20,.27,.29,1);G.rectangle('fill',x+24,y+12,48,3,1,1)
- if fraction>.5 then G.setColor(.20,.66,.46,1)
+ if theme and theme.hpColor then G.setColor(theme.hpColor(fraction))
+ elseif fraction>.5 then G.setColor(.20,.66,.46,1)
  elseif fraction>.2 then G.setColor(.93,.65,.23,1)
  else G.setColor(.87,.29,.28,1) end
  G.rectangle('fill',x+24,y+12,48*fraction,3,1,1)
@@ -77,15 +92,17 @@ function M.drawBottom(s)
  if phase~='menu' and phase~='moves' and phase~='resolving' and phase~='db2_target' then return false end
  if not s:bottomUIVisible() then return true end
  guard(function()
-  love.graphics.translate((M.layout.width-160)/2,M.layout.height-148)
-  panel(2,100,156,42)
+  local theme=themeProvider and themeProvider()
+  love.graphics.translate(theme and M.layout.width-168 or (M.layout.width-160)/2,M.layout.height-158)
+  if not theme or phase~='menu' then panel(2,100,156,52)end
   if phase=='menu' then
+   if theme and theme.commandHub then theme.commandHub(84,129)end
    for i,name in ipairs(s:menuLabels()) do
-    local x=5+((i-1)%2)*77;local y=103+math.floor((i-1)/2)*18
+    local x=5+((i-1)%2)*(theme and 82 or 77);local y=103+math.floor((i-1)/2)*(theme and 30 or 18)
     local selected=s.menuIndex==i
-    panel(x,y,73,15,selected)
+    if theme and theme.button then theme.button(x,y,76,22,({'fight','pokemon','bag','run'})[i],selected,i%2==0)else panel(x,y,73,15,selected)end
     -- Use the engine's labels/order so controller selection stays identical.
-    label(name,x+5,y+3,64,selected and {1,1,1,1} or nil)
+    if theme and theme.text then theme.text(({"FIGHT","PKMN","ITEMS","RUN"})[i] or name,x+5,y+5,66,{1,1,.96,1},true)else label(name,x+5,y+3,64,selected and {1,1,1,1} or nil)end
    end
   elseif phase=='db2_target' then
    label('CHOOSE TARGET   A: Confirm   B: Back',7,102,146)
@@ -121,8 +138,8 @@ function M.drawBottom(s)
  end)
  return true
 end
-function M.install(State, enabled)
- allBattles=enabled
+function M.install(State, enabled, presentationTheme, headAnchor)
+ allBattles=enabled;themeProvider=presentationTheme;anchorProvider=headAnchor
  if State.modernDoublesHudInstalled then return end
  State.modernDoublesHudInstalled=true
  State.usesModernDoublesHud=function(s)return M.active(s) end

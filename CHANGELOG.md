@@ -1,3 +1,7 @@
+## Unreleased — in-game settings
+
+Add independent native FireRed/LeafGreen OPTIONS pages and missing Gen 1/2 settings rows; preserve stored values and emit option changes. Tested on Gen1Recomp 0.3.0.
+
 ## 0.9.5 — 2026-09-22 — overhead status cards with Battle Art
 
 Consume Battle Art's public head-anchor/theme exports for independent silver

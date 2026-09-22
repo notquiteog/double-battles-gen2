@@ -11,6 +11,9 @@
 -- Link play is deliberately untouched: the manifest declares
 -- affects_link, so the handshake refuses mixed matches cleanly.
 return function(mod)
+  if require('src.core.GameVersion').generation()==3 then
+    return assert((loadstring or load)(assert(mod:read('lib/gen3/init.lua')),'@doubles/gen3/init'))()(mod)
+  end
   -- shared helpers, synced in as lib/shared/ by the monorepo's scripts
   local function loadShared(file)
     local src = mod:read("lib/shared/" .. file)
@@ -25,7 +28,7 @@ return function(mod)
     return
   end
 
-  mod.options:define({
+  local schema=mod.options:define({
     { key = "modern_hud", label = "MODERN BATTLE UI", type = "toggle", default = true },
     { key = "wild_doubles", label = "WILD DOUBLES", type = "choice",
       default = "sometimes",
@@ -55,6 +58,7 @@ return function(mod)
     { key = "gen2_doubles", label = "CRYSTAL 2V2", type = "toggle",
       default = true },
   })
+  assert((loadstring or load)(assert(mod:read('lib/InGameOptions.lua')),'@double-battles-gen2/options'))().install(mod,schema,'DOUBLE BATTLES')
 
   local function doubleChance()
     local v = mod.options:get("wild_doubles")

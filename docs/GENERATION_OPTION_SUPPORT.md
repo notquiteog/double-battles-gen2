@@ -34,6 +34,14 @@ before selecting the first ally consumes the team's turn; one used after the
 first selection retains that selected action. Native Gen3 uses its original
 four-slot item/move/target UI; a last-wild ball consumes the team's turn.
 
+The test.5 native wild-intro adapter reuses the engine's multi-ID ally throw,
+cry and healthbox steps and synchronizes the second enemy's opening slide.
+It applies only to Doubles-owned wild doubles and ends at intro completion or
+reset, preserving independent move/faint/capture presentation afterward.
+Trainer/link intros, absent SOLO allies and already-complete native sequences
+are preserved. Published test.4 exhibited invisible slots 2/3 in local wild
+doubles; post-publication test.5 visual verification is pending.
+
 ## Independence and optional contracts
 
 No companion mod is required. Battle Art supplies presentation only. Doubles
@@ -62,6 +70,11 @@ owns shared flyer claims; Doubles never consumes remote shared entities.
 
 ## Validation and remaining checks
 
+- `luajit tests/gen3_intro_unit.lua ENGINE_ROOT`: 26 checks using the official
+  State/IntroSeq interpreter plus two already-complete-engine guards; original
+  invisible partners reproduced before adaptation, actual native slide/throw/
+  cry/healthbox progression, SOLO, reset and later hidden-move preservation.
+
 - `luajit tests/gen3_parity_unit.lua ENGINE_ROOT`: actual official native State
   with mocked external services; wild flags, source scope, solo slots, wild RUN odds, trainer
   pools/rewards/flags, experience, HUD fallback, capture inventory and slot 3.
@@ -71,9 +84,11 @@ owns shared flyer claims; Doubles never consumes remote shared entities.
 - `luajit tests/gen2_commands_unit.lua`: 15 command/cancellation/item contracts.
 - `luajit tests/gen2_pairs_unit.lua`: 11 distance/roster/reward/flag contracts.
 
-New gameplay and visual testing remains pending until the complete mod-set
-implementation is ready. Native capture animation, naming/PC storage, authored
-trainer combinations, map scripting, multi-client integration and switch/item
-menu edge cases need that pass. Gen2 spread moves and the full doubles move
+Published test.4 passed FireRed and Crystal two-endpoint online doubles with
+party restoration and persistent rooms. Those checks did not exercise the
+local wild intro; the new test.5 presentation fix needs post-publication
+FireRed/LeafGreen visual acceptance. Native capture animation, naming/PC storage,
+authored trainer combinations, map scripting and switch/item menu edge cases
+still need broader coverage. Gen2 spread moves and the full doubles move
 interaction matrix are not certified. Existing prior online checks do not
 validate the newly added local/native adapters.

@@ -16,6 +16,9 @@ stub('src.core.game3.party',{})
 local events={}
 stub('src.mods.Runtime',{wants=function()return true end,emit=function(k,v)events[#events+1]={k,v}end})
 local Battle=stub('src.core.game3.battle',{_headless=true,_adapter={rng=function()return rng.compat end}})
+stub('src.core.game3.battle.intro_seq',{reset=function()end,begin=function()return false end,update=function()return true end,busy=function()return false end})
+stub('src.core.game3.battle.anim',{})
+stub('src.core.Strings',setmetatable({source=function(v)return v end},{__call=function(_,fmt,...)return string.format(fmt,...)end}))
 function Battle.getState()return Battle.st end
 local seen
 function Battle.start(opts)

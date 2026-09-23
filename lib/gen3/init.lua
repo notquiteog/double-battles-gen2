@@ -174,6 +174,7 @@ return function(mod)
   return amount
  end)
  part('lib/gen3/capture.lua')(mod)
+ part('lib/gen3/intro.lua')()
  part('lib/gen3/hud.lua')(mod)
  mod.exports.pairInfo=function(st)return st and st.__dbPairInfo end
  mod.exports.online={protocol=1,generation=3,supportsDouble=function()return opt('online_doubles')~=false end}

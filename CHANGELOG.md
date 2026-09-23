@@ -1,3 +1,28 @@
+## 0.12.0-test.5 — 2026-09-22
+
+Test patch for official engine 0.3.1.
+
+Native wild doubles previously reached the command menu with the second ally
+and second enemy hidden. The engine initialized four sprite presentations,
+but its wild intro animated only the two singles slots.
+
+- Extend only Doubles-owned native wild intros with the native multi-battler
+  ally throw, cry queue and healthbox steps. Both enemies follow the opening
+  slide and fade, and the messages name both sides where applicable.
+- Stop synchronization when the intro finishes or resets. Moves, fainting,
+  switching and capture retain control of each battler's presentation.
+- Preserve SOLO's absent ally, authored trainer and link doubles, headless
+  intros, and engines that already provide complete multi-battler wild intros.
+  No companion mod is required and the native combat state remains unchanged.
+
+Validation: 26 checks using official native State and IntroSeq with deterministic
+presentation/audio/UI fixtures, plus two guards for an already-complete engine
+intro. The fixture reproduces the original invisible-slot failure before
+installing the adapter. Existing 44 native parity contracts and LuaJIT
+entry/library compilation pass. Post-publication FireRed/LeafGreen visual
+verification of the new archive is pending; earlier online-double passes did
+not exercise this local wild-intro path. No live game profile was changed.
+
 ## 0.12.0-test.4 — 2026-09-22
 
 Development test build for engine 0.3.1. New gameplay testing is pending.

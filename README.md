@@ -1,4 +1,4 @@
-> Test build 0.12.0-test.4 adds native wild doubles/capture, shared Gen2/Gen3 settings, adjacent trainer pairs and local Crystal paired commands. New gameplay checks remain pending. [Release notes](RELEASE_NOTES_0.12.0-test.4.md).
+> Test build 0.12.0-test.5 fixes hidden native wild-double partners during the battle intro. Official intro-interpreter and parity tests pass; published-archive FireRed/LeafGreen visual verification is pending. [Release notes](RELEASE_NOTES_0.12.0-test.5.md).
 
 ## Fix Gen 1 online faint synchronization and partner HUD anchors — 0.12.0-test.3
 

@@ -1345,10 +1345,18 @@ return function(mod)
                                   target = e2Target }
       end
 
-      if self.__dbOnline and self.linkRole=='guest' then
+      if self.__dbOnline then
+        -- Both perspectives must compare the exact same actors. A dead local
+        -- partner still has a decoded row, while a dead remote partner has no
+        -- action: sorting that empty row consumed a one-sided speed-tie roll.
         local canonical={}
-        for _,who in ipairs({self.enemy,self.enemy2,self.player,self.player2})do
-          for _,e in ipairs(entries)do if e.user==who then canonical[#canonical+1]=e end end
+        local slots=self.linkRole=='guest' and {'enemy','enemy2','player','player2'}
+          or {'player','player2','enemy','enemy2'}
+        for _,slot in ipairs(slots)do
+          local who=self[slot]
+          for _,e in ipairs(entries)do
+            if e.user==who and alive(who) and e.action then canonical[#canonical+1]=e end
+          end
         end
         entries=canonical
       end

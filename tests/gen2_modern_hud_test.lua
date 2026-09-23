@@ -66,6 +66,9 @@ s.battle.doubles=nil
 assert(Hud.active(s),'single battle must use modern layout')
 s:drawSceneBody()
 modern=false;assert(not Hud.active(s),'single battle opt-out failed')
+s.battle.doubles={};assert(not Hud.active(s),'double battle opt-out failed')
+modern=true;assert(Hud.active(s),'double battle enable failed')
+s.battle.doubles=nil
 s.tutorial=true;modern=true;assert(not Hud.active(s),'tutorial layout must stay native')
 print('single battle modern layout, opt-out and tutorial guard passed')
 

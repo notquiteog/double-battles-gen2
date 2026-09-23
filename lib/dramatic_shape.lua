@@ -67,7 +67,7 @@ return function(env)
       if g == 0 then return nil end
       s = s * g
     end
-    return { b = b, s = s,
+    return { b = b, image = img, s = s,
              w = img:getWidth() * s, h = img:getHeight() * s }
   end
 
@@ -91,7 +91,7 @@ return function(env)
 
   -- ------- the three hooks, made per wired module set
 
-  local function makeSideTextureHook(Ov, St)
+  local function makeSideTextureHook(Ov, St, Bounds)
     return function(battle, side)
       local orig = Ov.__doubleBattlesOrigSideTexture
       if not (battle and battle.__double) then return orig(battle, side) end
@@ -199,7 +199,23 @@ return function(env)
       else
         ax = 80
       end
-      return { canvas = canvas, ax = ax, ay = ay }
+      local heads = {}
+      for _,m in ipairs({m1 or false,m2 or false}) do
+        if m then
+          local r = drawn[m.b]
+          local bounds = {0,0,m.w / m.s,m.h / m.s}
+          if Bounds then
+            local ok, found = pcall(Bounds.get, m.image)
+            if ok and found then bounds = found end
+          end
+          local slot = m.b == lead and side or side.."2"
+          heads[slot] = {r.x + (bounds[1]+bounds[3])*.5*m.s,
+                         r.y + bounds[2]*m.s}
+        end
+      end
+      return { canvas = canvas, ax = ax, ay = ay, hudAnchors = heads,
+        noMirror = side == "player" and Ov.playerCardNoMirror
+          and Ov.playerCardNoMirror() or false }
     end
   end
 
@@ -281,7 +297,9 @@ return function(env)
              and type(s.covers) == "function" then
             st = s
           end
-          found[#found + 1] = { ov = ov, st = st }
+          local okB, bounds = pcall(V.require, "SpriteHeadBounds")
+          found[#found + 1] = { ov = ov, st = st,
+            bounds = okB and type(bounds) == "table" and bounds or nil }
         end
       end
     end
@@ -291,7 +309,7 @@ return function(env)
   -- the originals are stored ONCE on the module tables; a hot reload
   -- re-points the hook fields instead of stacking another wrap (the
   -- OverworldController.pushBattle pattern in main.lua)
-  local function wire(ov, st)
+  local function wire(ov, st, bounds)
     if not ov.__doubleBattlesOrigSideTexture then
       ov.__doubleBattlesOrigSideTexture = ov.sideTexture
       ov.sideTexture = function(battle, side)
@@ -308,7 +326,7 @@ return function(env)
         return ov.__doubleBattlesOrigHudTexture(battle, slide, ...)
       end
     end
-    ov.__doubleBattlesSideTextureHook = makeSideTextureHook(ov, st)
+    ov.__doubleBattlesSideTextureHook = makeSideTextureHook(ov, st, bounds)
     ov.__doubleBattlesHudTextureHook = makeHudTextureHook(ov)
     if st then
       if not st.__doubleBattlesOrigCovers then
@@ -327,7 +345,7 @@ return function(env)
   function adapter.tryInstall()
     local found = locateAll()
     for _, f in ipairs(found) do
-      if not wired[f.ov] then wire(f.ov, f.st) end
+      if not wired[f.ov] then wire(f.ov, f.st, f.bounds) end
     end
     if #found > 0 then installed = true end
     return installed

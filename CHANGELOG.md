@@ -1,3 +1,11 @@
+## Fix Gen 1 online faint synchronization and partner HUD anchors — 0.12.0-test.3
+
+Online Gen 1 doubles now orders the same living actors on both peers. Previously a dead local partner’s empty action could consume an extra speed-tie random roll after bench replacement, ending the next turn with a state mismatch. Both sides now use host-first slot order and exclude empty/dead actions.
+
+The optional Battle Art adapter reports both sprite heads and preserves back-sprite orientation, allowing four projected status cards. Includes the Gen 2 modern UI opt-out correction. No companion becomes required.
+
+Verified with two native 0.3.1 clients: reproduced the divergent random-roll count, then passed paired turns through faints, bench replacement and completion with matching signatures and unchanged owned parties. Targeted Gen 2 HUD fallback/FX tests pass. Advanced move and disconnect coverage remains incomplete.
+
 ## Respect modern battle UI opt-out — 0.12.0-test.2
 
 Gen 2 modern HUD now respects OFF during doubles as well as singles, and honors Battle Art’s shared MODERN BATTLE UI setting when that optional mod is present. Standalone operation remains supported.

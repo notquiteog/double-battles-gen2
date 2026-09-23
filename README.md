@@ -1,4 +1,4 @@
-> Test build 0.12.0-test.5 fixes hidden native wild-double partners during the battle intro. Official intro-interpreter and parity tests pass; published-archive FireRed/LeafGreen visual verification is pending. [Release notes](RELEASE_NOTES_0.12.0-test.5.md).
+> Test build 0.12.0-test.5 fixes hidden native wild-double partners during the battle intro. Official intro-interpreter and parity tests pass; exact published FireRed/LeafGreen captures verify all four battlers visible and both foes animated. Native authored trainer doubles also passed. [Release notes](RELEASE_NOTES_0.12.0-test.5.md).
 
 ## Fix Gen 1 online faint synchronization and partner HUD anchors — 0.12.0-test.3
 

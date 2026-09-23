@@ -22,3 +22,6 @@ installing the adapter. Existing 44 native parity contracts and LuaJIT
 entry/library compilation pass. Post-publication FireRed/LeafGreen visual
 verification of the new archive is pending; earlier online-double passes did
 not exercise this local wild-intro path. No live game profile was changed.
+
+
+Post-publication validation: exact test.5 with BAV test.11 passed FireRed and LeafGreen native wild-double fixtures with all four battlers visible at command and after 180 frames, both enemy canvases animating, and distinct normal/shiny same-species art. Single battles also animate. Native abort returned to field. A separate FireRed native-authored trainer double reached command with all four visible. All captures were inspected. These focused presentation checks do not certify every move, species or multiplayer disconnect path.

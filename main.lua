@@ -52,14 +52,14 @@ return function(mod)
       default = "full",
       choices = { { "FULL", "full" }, { "HALF", "half" } } },
     -- the Crystal 2v2 core runs the engine's own battle sim with two
-    -- actives a side.  Presentation rides the engine screen today: the
-    -- second foe fights for real, its text and your damage show, its own
-    -- plate and sprite do not yet.  Off by default until that chunk lands.
+    -- actives a side, with native sprites, four status cards, and paired
+    -- local command collection. This preference gates automatic encounters.
     { key = "gen2_doubles", label = "CRYSTAL 2V2", type = "toggle",
       default = true },
   })
   assert((loadstring or load)(assert(mod:read('lib/InGameOptions.lua')),'@double-battles-gen2/options'))().install(mod,schema,'DOUBLE BATTLES')
 
+  local gen2OrganicUntil
   local function doubleChance()
     local v = mod.options:get("wild_doubles")
     if v == "always" then return 1 end
@@ -406,7 +406,7 @@ return function(mod)
   local expActive = nil
   mod.hooks:wrap("exp.gain", function(next, c)
     local gained = next(c)
-    if expActive and mod.options:get("double_exp") == "half" then
+    if (expActive or (c and c.battle and c.battle.doubles)) and mod.options:get("double_exp") == "half" then
       return math.max(1, math.floor((tonumber(gained) or 0) / 2))
     end
     return gained
@@ -2348,6 +2348,7 @@ return function(mod)
   -- battle-starting mods whose script battles ARE organic encounters
   -- (wild_skies bumps, free_fly interceptions) call this first
   mod.exports.tagOrganic = function()
+    gen2OrganicUntil=love.timer.getTime()+1
     local OC = require("src.world.OverworldController")
     OC.__doubleBattlesPendingBox = OC.__doubleBattlesPendingBox or {}
     OC.__doubleBattlesPendingBox.organicUntil = love.timer.getTime() + 1
@@ -2404,10 +2405,20 @@ return function(mod)
       end
     end
   end
+  local function gen2PlayerPartner(battle)
+    if mod.options:get("your_side") == "solo" then return nil end
+    for _, mon in ipairs(battle.party or {}) do
+      if mon ~= battle.player and not mon.isEgg and (mon.hp or 0) > 0 then return mon end
+    end
+  end
+  local gen2Pairs
+  if require("src.core.GameVersion").generation()==2 then
+    gen2Pairs=assert(load(assert(mod:read("lib/gen2/pairs.lua")), "@doubles/gen2/pairs"))()(mod,pairSources)
+  end
   local capturedStart, rollingWorld = nil, nil
   do
     local okW, World = pcall(require, "src.world.gen2.World")
-    if okW and World and type(World.startBattle) == "function"
+    if gen2Pairs and okW and World and type(World.startBattle) == "function"
         and not World.doublesGen2StartWrap then
       local origStart = World.startBattle
       local origRandom = World.tryWildEncounter
@@ -2431,11 +2442,18 @@ return function(mod)
           return unpack(result,2)
         end
       end
-      World.startBattle = function(self, opts, ...)
+      World.startBattle = function(self, opts, onDone)
+        local pairInfo
+        opts,pairInfo=gen2Pairs.combine(self,opts or {})
         local previous=capturedStart
-        capturedStart={world=self, opts=opts or {},
+        local organic=gen2OrganicUntil and love.timer.getTime()<=gen2OrganicUntil and opts.wild~=nil
+        gen2OrganicUntil=nil
+        capturedStart={world=self, opts=opts or {}, pairInfo=pairInfo, organic=organic,
           terrain=rollingWorld and rollingWorld.world==self and rollingWorld.terrain}
-        local result={pcall(origStart,self,opts,...)}
+        local result={pcall(origStart,self,opts,function(outcome)
+          gen2Pairs.finish(self,pairInfo,outcome)
+          if onDone then return onDone(outcome)end
+        end)}
         capturedStart=previous
         if not result[1] then error(result[2],0) end
         return unpack(result,2)
@@ -2456,10 +2474,11 @@ return function(mod)
       local Gen2Mon = require("src.battle.gen2.Mon")
       if battle.trainer then
         -- trainer 2v2: the trainer's own second able mon steps up front
-        if not mod.options:get("trainer_doubles") then return end
+        if not capturedStart.pairInfo and not mod.options:get("trainer_doubles") then return end
         local second = (battle.enemyParty or {})[2]
         if second and (second.hp or 0) > 0 then
-          doubles2Gen2.decorate(battle, nil, second)
+          doubles2Gen2.decorate(battle, gen2PlayerPartner(battle), second, {solo=mod.options:get("your_side")=="solo"})
+          if capturedStart.pairInfo then gen2Pairs.decorate(battle,capturedStart.pairInfo)end
           mod.log:info("trainer 2v2: %s joins the lead",
             tostring(second.species))
         end
@@ -2475,20 +2494,28 @@ return function(mod)
       -- Visible spawns, fishing, gifts, scripts and mod world APIs keep the
       -- exact encounter their owner supplied, even with ALWAYS selected.
       local start=capturedStart
-      if not (start and (start.terrain=='grass' or start.terrain=='water')) then return end
+      if not (start and (start.organic or start.terrain=='grass' or start.terrain=='water')) then return end
       if start.opts.contest or start.opts.tutorial or start.opts.battleType then return end
       if chance<1 and math.random()>=chance then return end
       local world = start.world
-      if not (world and world.map and world.encounters) then return end
-      local okE, Encounter = pcall(require, "src.battle.gen2.Encounter")
-      if not (okE and Encounter and Encounter.grassSlot) then return end
-      local okRoll, roll
-      if start.terrain=='water' then
-        okRoll,roll=pcall(Encounter.waterSlot,world.encounters,world.map.id,battle.random)
-      else
-        okRoll,roll=pcall(Encounter.grassSlot,world.encounters,world.map.id,world.tod,battle.random)
+      local context={kind="wild",generation=2,enemy={mon=battle.enemy}}
+      if vetoedBy(world.game,context) then return end
+      local roll
+      local species,level=providerPartner(world.game,context,-math.huge,math.huge)
+      if species then roll={species=species,level=level or battle.enemy.level} end
+      if not roll and (start.terrain=='grass' or start.terrain=='water') then
+        if not (world and world.map and world.encounters) then return end
+        local okE, Encounter = pcall(require, "src.battle.gen2.Encounter")
+        if not (okE and Encounter and Encounter.grassSlot) then return end
+        local okRoll
+        if start.terrain=='water' then
+          okRoll,roll=pcall(Encounter.waterSlot,world.encounters,world.map.id,battle.random)
+        else
+          okRoll,roll=pcall(Encounter.grassSlot,world.encounters,world.map.id,world.tod,battle.random)
+        end
+        if not okRoll then return end
       end
-      if not (okRoll and type(roll) == "table" and roll.species) then return end
+      if not (type(roll)=="table" and roll.species) then return end
       local Gen2Mon = require("src.battle.gen2.Mon")
       local okMon, secondMon = pcall(Gen2Mon.new, battle.data,
         roll.species, roll.level or 2)
@@ -2497,7 +2524,7 @@ return function(mod)
         secondMon.moves = { { id = "TACKLE", pp = 35, maxPp = 35 } }
       end
       battle.enemyParty[2] = secondMon
-      doubles2Gen2.decorate(battle, nil, secondMon)
+      doubles2Gen2.decorate(battle, gen2PlayerPartner(battle), secondMon, {solo=mod.options:get("your_side")=="solo"})
       mod.log:info("wild double: %s joins %s", tostring(roll.species),
         tostring(battle.enemy and battle.enemy.species))
     end)
@@ -2540,8 +2567,7 @@ return function(mod)
   -- draw the second foe beside the lead on the engine screen itself.  With
   -- the voxel fork present it composes both mons into its own staged card
   -- and this wrap stands down (checked per call, so a settings change
-  -- mid-session cannot double-draw).  The second HP plate stays a known
-  -- beta gap; the partner's attacks and the damage against it are live.
+  -- mid-session cannot double-draw). The independent HUD resolves all slots.
   if doubles2Gen2 then
     local okBS, BattleState = pcall(require, "src.ui.gen2.BattleState")
     if okBS and BattleState and type(BattleState.drawPic) == "function"
@@ -2552,11 +2578,11 @@ return function(mod)
         local partner = nil
         local shift = 0
         if battle and battle.doubles and mon then
-          if mon == battle.enemy then
-            partner = battle.enemy2
+          if mon == battle.doubles.enemy then
+            partner = battle.doubles.enemy2
             shift = -56 -- toward screen centre, left of the lead
-          elseif mon == battle.player then
-            partner = battle.player2
+          elseif mon == battle.doubles.player then
+            partner = battle.doubles.player2
             shift = 56
           end
         end
@@ -2595,6 +2621,7 @@ return function(mod)
     local ok, State=pcall(require,"src.ui.gen2.BattleState")
     local source=mod:read("lib/gen2_hud.lua")
     if ok and State and source then
+      assert(load(assert(mod:read("lib/gen2/commands.lua")),"@doubles/gen2/commands"))().install(State)
       local target=assert(mod:read("lib/gen2_target.lua"))
       assert(load(target,"@double_battles/lib/gen2_target.lua"))().install(State)
       assert(load(source,"@double_battles/lib/gen2_hud.lua"))().install(State, function()

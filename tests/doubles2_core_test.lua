@@ -294,4 +294,35 @@ do
  T.eq(battle.player,party[1],"lead restored after partner effect")
 end
 
+do -- a paired trainer replaces its fainted ally from its own roster
+ local battle,party,wild,wild2=battleWith(true)
+ local aBench,bBench=mon("SPEAROW",10),mon("RATTATA",10)
+ battle.enemyParty={wild,wild2,aBench,bBench}
+ doubles2.decorate(battle,party[2],wild2)
+ battle.doubles.enemyOwner={[1]="enemy",[2]="enemy2",[3]="enemy",[4]="enemy2"}
+ wild2.hp=0
+ battle:takeTurn({player={kind="skip"},player2={kind="skip"},enemy={kind="skip"},enemy2={kind="skip"}})
+ T.eq(battle.enemy2,bBench,"trainer B takes its own reserve, not trainer A's")
+ T.eq(battle.enemy,wild,"trainer A active stays in place")
+ T.check(battle.doubles.takeTurn~=nil,"paired trainer turn core remains active")
+end
+
+do -- SOLO never recruits a second player when the lead needs replacement
+ local battle,party,wild,wild2=battleWith(true)
+ doubles2.decorate(battle,nil,wild2,{solo=true})
+ party[1].hp=0
+ battle:takeTurn({player={kind="skip"},enemy={kind="skip"},enemy2={kind="skip"}})
+ T.eq(battle.player,party[2],"solo sends one healthy replacement")
+ T.eq(battle.player2,nil,"solo partner stays absent")
+end
+
+do -- a living ally steps into a fainted lead's native menu position
+ local battle,party,wild,wild2=battleWith(true)
+ doubles2.decorate(battle,party[2],wild2)
+ party[1].hp=0
+ battle:takeTurn({player2={kind="skip"},enemy={kind="skip"},enemy2={kind="skip"}})
+ T.eq(battle.player,party[2],"survivor becomes native primary")
+ T.eq(battle.doubles.index.player,2,"survivor keeps correct party index")
+end
+
 T.finish("double battles gen2 core")

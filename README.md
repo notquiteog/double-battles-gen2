@@ -1,3 +1,5 @@
+> Test build 0.12.0-test.4 adds native wild doubles/capture, shared Gen2/Gen3 settings, adjacent trainer pairs and local Crystal paired commands. New gameplay checks remain pending. [Release notes](RELEASE_NOTES_0.12.0-test.4.md).
+
 ## Fix Gen 1 online faint synchronization and partner HUD anchors — 0.12.0-test.3
 
 Online Gen 1 doubles now orders the same living actors on both peers. Previously a dead local partner’s empty action could consume an extra speed-tie random roll after bench replacement, ending the next turn with a state mismatch. Both sides now use host-first slot order and exclude empty/dead actions.
@@ -16,13 +18,13 @@ TEST PRERELEASE: gameplay checks follow publication.
 
 **0.11.0: Crystal online paired turns.** Adds an optional Crystal link provider for Online rooms: two owned Pokemon per side, explicit target selection, paired commands, deterministic mirrored ordering, native battle effects and cloned-party restoration. Partner actions and speed use independent native stat contexts; empty online slots refill from the bench.
 
-Known limits: Gen 1 online doubles are not implemented. Crystal doubles remain experimental; advanced move-effect combinations and the full disconnect matrix have not been exhaustively verified. FireRed/LeafGreen continue using the native doubles engine.
+Historical 0.11.0 limits: Crystal doubles remain experimental; advanced move-effect combinations and the full disconnect matrix have not been exhaustively verified. FireRed/LeafGreen continue using the native doubles engine.
 
 Requires Gen1Recomp 0.3.1 for the verified Gen 3 path. Other mods are optional; no ROM, player save or import cache is included.
 
-**0.10.0: Native Gen 3 doubles and restored settings.** Adds a native Gen 3 double-battle adapter and optional Online integration. Preserves native trainer double battles and exact visible-spawn encounters. Restores independent in-game settings in GB and Gen 3.
+**Working-tree parity update:** Gen2 and native Gen3 now consume the shared encounter, ally, trainer-pair, distance, experience, and HUD preferences. See [the option/support inventory](docs/GENERATION_OPTION_SUPPORT.md) for implementation boundaries, independent/optional contracts, and pending gameplay checks.
 
-Gen 1/2 online doubles are not implemented. Local Gen 1/2 doubles and native Gen 3 doubles remain separate paths.
+Gen1/Gen2 expose optional Online mechanics providers; native Gen3 uses the engine link implementation.
 
 # Double Battles
 
@@ -130,9 +132,13 @@ scripted/special encounters, and battles supplied by other mods retain their
 original Pokémon. ALWAYS does not override those boundaries. Trainer doubles
 use the trainer's existing party. A surviving 1v1 returns to native singles.
 
-The four-slot simulation exists, but normal Crystal UI still commands one
-player-side active Pokémon; collecting both allies' commands is unfinished.
-Spread-move parity and the full set of doubles interactions are not certified.
-Online+ and native link battles remain singles: their protocol has no doubles
-command/target exchange, and automatic doubles must not modify them. Local
-simulation checks are not a two-computer Internet multiplayer verification.
+The local Crystal menu collects both allies' move or switch choices before
+committing a round. Press B at the partner's command menu to revise the first
+choice. Nearby ordinary trainers may combine their separate rosters; both
+native defeat events and prizes are handled on victory.
+
+Online doubles use the existing optional negotiated mechanics provider; ordinary
+local encounter settings do not modify link construction. Newly added local
+and native Gen3 parity paths have isolated contract coverage. Their gameplay,
+capture animation, and multi-client integration checks remain pending. Gen2
+spread-move parity and the complete doubles interaction matrix are not certified.

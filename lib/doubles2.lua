@@ -262,52 +262,54 @@ local function sendInsAndCollapse(battle)
   local d = battle.doubles
   local sides=battle.linkBattle and battle.mirrored and {"enemy","player"} or {"player","enemy"}
   for _, side in ipairs(sides) do
-    if livingCount(battle, side) < (battle.linkBattle and 2 or 1) and not battle.over then
+    local paired = side == "enemy" and d.enemyOwner ~= nil
+    local desired = side == "player" and d.solo and 1 or 2
+    if livingCount(battle, side) < ((battle.linkBattle or paired) and desired or 1) and not battle.over then
       local bench = side == "player" and battle.party or (battle.enemyParty or {})
       local used = {}
-      for _, slot in ipairs(slotOrder(battle)) do
-        local mon = d[slot]
-        if mon then used[mon] = true end
-      end
-      local function nextBench()
-        for i,mon in ipairs(bench)do if (mon.hp or 0)>0 and not used[mon] and not mon.isEgg then return i end end
-      end
-      local nextIndex=nextBench()
-      while nextIndex and livingCount(battle,side)<2 do
-        local mon = bench[nextIndex]
-        -- The first empty slot on this side takes the send-in.
-        local emptySlot
-        for _, s in ipairs({ side, side .. "2" }) do
-          local cur = d[s]
-          if not (cur and (cur.hp or 0) > 0) then emptySlot = s break end
+      for _, slot in ipairs(slotOrder(battle)) do if d[slot] then used[d[slot]] = true end end
+      for _, emptySlot in ipairs({side, side .. "2"}) do
+        local cur = d[emptySlot]
+        if not (cur and (cur.hp or 0)>0) and not (desired==1 and emptySlot==side.."2") then
+          local nextIndex
+          for i, mon in ipairs(bench) do
+            if (mon.hp or 0)>0 and not used[mon] and not mon.isEgg
+                and (not paired or d.enemyOwner[i]==emptySlot) then nextIndex=i;break end
+          end
+          if nextIndex then
+            local mon = bench[nextIndex]
+            d[emptySlot], battle[emptySlot] = mon, mon
+            d.stages[emptySlot]=Battle.newStages()
+            battle.stages[emptySlot]=d.stages[emptySlot]
+            d.fainted[emptySlot]=nil;d.index[emptySlot]=nextIndex
+            if emptySlot==side then battle[side.."Index"]=nextIndex end
+            battle:emit({kind="send",side=emptySlot,mon=mon,replacement=true,
+              hp=mon.hp or 0,status=mon.status or false,level=mon.level,experience=mon.experience,
+              text=Battle.sentOutText(battle.trainer and battle.trainer.name or "Foe",battle:monName(mon))})
+            Runtime.emit("battle.battler_switched",{battle=battle,side=slotSideRecord(battle,emptySlot),battler=mon})
+            syncLeads(battle);used[mon]=true
+            if not (battle.linkBattle or paired) then break end
+          end
         end
-        d[emptySlot] = mon
-        d.stages[emptySlot]=Battle.newStages()
-        battle.stages[emptySlot]=d.stages[emptySlot]
-        d.fainted[emptySlot] = nil
-        d.index[emptySlot] = nextIndex
-        battle[emptySlot] = mon
-        if emptySlot == side then
-          if side == "player" then battle.player, battle.playerIndex = mon, nextIndex
-          else battle.enemy, battle.enemyIndex = mon, nextIndex end
-        end
-        battle:emit({ kind = "send", side = emptySlot, mon = mon,
-          replacement = true, hp = mon.hp or 0, status = mon.status or false,
-          level = mon.level, experience = mon.experience,
-          text = Battle.sentOutText(battle.trainer and battle.trainer.name or "Foe",
-            battle:monName(mon)) })
-        Runtime.emit("battle.battler_switched", { battle = battle,
-          side = slotSideRecord(battle, emptySlot), battler = mon })
-        syncLeads(battle)
-        used[mon]=true
-        if not battle.linkBattle then break end
-        nextIndex=nextBench()
       end
     end
   end
+  -- Native menu entry expects a healthy primary ally. If its partner is
+  -- the only active survivor, promote it before handing input back.
+  if not battle.linkBattle and not (d.player and d.player.hp>0) and d.player2 and d.player2.hp>0 then
+    d.player,d.player2=d.player2,d.player
+    d.index.player,d.index.player2=d.index.player2,d.index.player
+    d.stages.player,d.stages.player2=d.stages.player2,d.stages.player
+    d.fainted.player,d.fainted.player2=d.fainted.player2,d.fainted.player
+    battle.player,battle.player2=d.player,d.player2;battle.playerIndex=d.index.player
+    battle.stages.player,battle.stages.player2=d.stages.player,d.stages.player2
+    battle:emit({kind="send",side="player",mon=battle.player,replacement=true,
+      hp=battle.player.hp,status=battle.player.status or false,level=battle.player.level,
+      text=Strings("%s steps forward!",battle:monName(battle.player))})
+  end
   -- Collapse: one standing mon a side, both sides -- the engine's own 1v1
   -- turn loop takes over from here, party rotation and all.
-  if not battle.linkBattle and livingCount(battle, "player") == 1 and livingCount(battle, "enemy") == 1 then
+  if not battle.linkBattle and not d.enemyOwner and livingCount(battle, "player") == 1 and livingCount(battle, "enemy") == 1 then
     if battle.doubles.takeTurn then
       -- Singles must inherit the SURVIVOR, not a fainted lead whose partner
       -- is still hidden in slot 2. Keep references to the actual party mons.
@@ -529,12 +531,13 @@ end
 -- the player side 1v1); secondEnemy: a mon for the foe's second slot.
 -- The second slots' party indexes are remembered so switches and the AI
 -- context swaps can restore the leads exactly.
-function M.decorate(battle, secondPlayer, secondEnemy)
+function M.decorate(battle, secondPlayer, secondEnemy, options)
   engine()
   local d = {
     index = {},
     fainted = {},
     engineTakeTurn = battle.takeTurn,
+    solo = options and options.solo or false,
   }
   battle.doubles = d
   d.stages={player=battle.stages.player,enemy=battle.stages.enemy,player2=Battle.newStages(),enemy2=Battle.newStages()}

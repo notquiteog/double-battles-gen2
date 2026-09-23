@@ -1,3 +1,9 @@
+## Respect modern battle UI opt-out — 0.12.0-test.2
+
+Gen 2 modern HUD now respects OFF during doubles as well as singles, and honors Battle Art’s shared MODERN BATTLE UI setting when that optional mod is present. Standalone operation remains supported.
+
+TEST PRERELEASE: gameplay checks follow publication.
+
 ## 0.12.0-test.1 — 2026-09-22
 
 Gen 1 online doubles mechanics provider: both players choose both moves and targets, cloned-party switches, deterministic ordering and bench refill. Native Gen 3 doubles retained.

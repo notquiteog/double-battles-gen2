@@ -2590,7 +2590,11 @@ return function(mod)
       local target=assert(mod:read("lib/gen2_target.lua"))
       assert(load(target,"@double_battles/lib/gen2_target.lua"))().install(State)
       assert(load(source,"@double_battles/lib/gen2_hud.lua"))().install(State, function()
+        local provider=mod.find("BATTLE_ART_VOXEL_FORK")
+        local ex=provider and provider.exports
+        local p=ex and ex.battlePresentation
         return mod.options:get("modern_hud") == true
+          and (not (p and p.modernUIEnabled) or p.modernUIEnabled())
       end, function()
         local provider=mod.find("BATTLE_ART_VOXEL_FORK")
         local ex=provider and provider.exports

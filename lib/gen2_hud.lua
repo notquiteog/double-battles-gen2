@@ -45,7 +45,7 @@ local function guard(fn)
  if not ok then error(err,0) end
 end
 function M.active(s)
- return s.battle and (s.battle.doubles or (allBattles and allBattles())) and not s.tutorial
+ return s.battle and (not allBattles or allBattles()) and not s.tutorial
 end
 local function card(s,slot,x,y,ally)
  local mon=s:activeMon(slot)

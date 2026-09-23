@@ -1,3 +1,9 @@
+## Respect modern battle UI opt-out — 0.12.0-test.2
+
+Gen 2 modern HUD now respects OFF during doubles as well as singles, and honors Battle Art’s shared MODERN BATTLE UI setting when that optional mod is present. Standalone operation remains supported.
+
+TEST PRERELEASE: gameplay checks follow publication.
+
 > Test build 0.12.0-test.1: Gen 1 online doubles mechanics provider: both players choose both moves and targets, cloned-party switches, deterministic ordering and bench refill. Native Gen 3 doubles retained. Gameplay verification pending.
 
 **0.11.0: Crystal online paired turns.** Adds an optional Crystal link provider for Online rooms: two owned Pokemon per side, explicit target selection, paired commands, deterministic mirrored ordering, native battle effects and cloned-party restoration. Partner actions and speed use independent native stat contexts; empty online slots refill from the bench.

@@ -1,3 +1,9 @@
+## 0.12.0 — 2026-09-22
+
+Includes native FireRed/LeafGreen wild-double introductions showing all four battlers, native trainer/link preservation, and the previously verified Gen1 online faint synchronization and Gen2 double-command fixes. Exhaustive move/disconnect combinations remain unfinished.
+
+Numbered release of the tested 0.12.0-test.5 build. Runtime and assets are unchanged except version metadata; packaging and cart pins are refreshed. Validation from the prior exact releases remains applicable: official Gen1Recomp 0.3.1, isolated profiles, targeted native rendering/integration checks. This release does not claim complete cross-generation feature or visual parity.
+
 ## 0.12.0-test.5 — 2026-09-22
 
 Test patch for official engine 0.3.1.

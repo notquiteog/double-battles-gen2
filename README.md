@@ -1,3 +1,5 @@
+> Test build 0.12.0-test.1: Gen 1 online doubles mechanics provider: both players choose both moves and targets, cloned-party switches, deterministic ordering and bench refill. Native Gen 3 doubles retained. Gameplay verification pending.
+
 **0.11.0: Crystal online paired turns.** Adds an optional Crystal link provider for Online rooms: two owned Pokemon per side, explicit target selection, paired commands, deterministic mirrored ordering, native battle effects and cloned-party restoration. Partner actions and speed use independent native stat contexts; empty online slots refill from the bench.
 
 Known limits: Gen 1 online doubles are not implemented. Crystal doubles remain experimental; advanced move-effect combinations and the full disconnect matrix have not been exhaustively verified. FireRed/LeafGreen continue using the native doubles engine.

@@ -678,9 +678,9 @@ return function(mod)
 
     -- your own partner: the next healthy party mon, when the option
     -- says PAIR and the bench has one to give
-    if mod.options:get("your_side") ~= "solo" and battle.player then
-      local benchMon = providerAlly(game, battle)
-        or secondHealthy(game.save, battle.player.mon)
+    if (battle.__dbOnline or mod.options:get("your_side") ~= "solo") and battle.player then
+      local benchMon = battle.__dbOnline and secondHealthy({party=battle.playerParty},battle.player.mon)
+        or providerAlly(game, battle) or secondHealthy(game.save, battle.player.mon)
       if benchMon then
         local okP, ally = pcall(BattleState.makeBattler, game.data,
                                 benchMon, true, game.save)
@@ -1011,7 +1011,7 @@ return function(mod)
           self.phase = "db_switch_target"
           return
         end
-        if alive(self.enemy2) then
+        if self.__dbOnline or alive(self.enemy2) then
           self:resolveTurn({ dbSwitch = newMon })
           return
         end
@@ -1219,7 +1219,7 @@ return function(mod)
       if self.__dbSwitchSwapped then self:__dbSwitchReset() end
       -- both foes up and a move picked: ask which one to aim at
       -- (update/overlay decorations own the db_target phase)
-      if playerAction and playerAction.id and not self.__dbTarget
+      if not self.__dbResolving and playerAction and playerAction.id and not self.__dbTarget
          and not SPREAD[playerAction.id]
          and alive(self.enemy2) and alive(self.enemy) then
         self.__dbPending = playerAction
@@ -1268,6 +1268,9 @@ return function(mod)
       slotB = slotB or self.__dbSlotB
       self.__dbSlotB = nil
 
+      if self.__dbSubmit and not self.__dbResolving then
+        return self:__dbSubmit(slotA or {user=self.player,action=playerAction,target=chosen},slotB)
+      end
       local Runtime = require("src.mods.Runtime")
       local TurnOrder = require("src.battle.TurnOrder")
       local TrainerAI = require("src.battle.TrainerAI")
@@ -1300,17 +1303,22 @@ return function(mod)
         self.player = realPlayer
         return okA and act or nil
       end
-      local e1Target = foeTarget()
-      local e1
+      local e1Target,e2Target,e1,e2
+      if self.__dbRemote then
+        e1,e1Target=self.__dbRemote[1].action,self.__dbRemote[1].target
+        e2,e2Target=self.__dbRemote[2].action,self.__dbRemote[2].target
+      else
+      e1Target = foeTarget()
       if self.kind == "wild" then
         e1 = chooseVs(self.enemy, e1Target) or self:enemyAction()
       else
         e1 = self:enemyAction()
       end
-      local e2, e2Target
       if alive(self.enemy2) then
         e2Target = foeTarget()
         e2 = chooseVs(self.enemy2, e2Target)
+      end
+
       end
 
       self.turnCount = (self.turnCount or 0) + 1
@@ -1337,6 +1345,13 @@ return function(mod)
                                   target = e2Target }
       end
 
+      if self.__dbOnline and self.linkRole=='guest' then
+        local canonical={}
+        for _,who in ipairs({self.enemy,self.enemy2,self.player,self.player2})do
+          for _,e in ipairs(entries)do if e.user==who then canonical[#canonical+1]=e end end
+        end
+        entries=canonical
+      end
       -- switches resolve before anything moves (gen 1's own free-hit
       -- order); the rest gets the engine comparator's speed and ties
       local ordered, movers = {}, {}
@@ -1768,6 +1783,10 @@ return function(mod)
     end
 
     return battle
+  end
+
+  if require('src.core.GameVersion').generation()==1 then
+    mod.exports.online=assert(load(assert(mod:read('lib/gen1_online.lua')),'@doubles/gen1_online'))()(applyDouble)
   end
 
   -- ------- drawing: every battler on screen at once

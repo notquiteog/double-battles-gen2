@@ -1,3 +1,9 @@
+## 0.12.0-test.1 — 2026-09-22
+
+Gen 1 online doubles mechanics provider: both players choose both moves and targets, cloned-party switches, deterministic ordering and bench refill. Native Gen 3 doubles retained.
+
+**TEST PRERELEASE — published before gameplay testing at the user’s request.** Build/compile validation only at publication. Gen 1 online doubles and the new door/healing projection require native gameplay verification; advanced move effects and disconnect combinations may need corrections. Existing stable releases remain unchanged.
+
 ## 0.11.0 — 2026-09-22
 
 Adds an optional Crystal link provider for Online rooms: two owned Pokemon per side, explicit target selection, paired commands, deterministic mirrored ordering, native battle effects and cloned-party restoration. Partner actions and speed use independent native stat contexts; empty online slots refill from the bench.

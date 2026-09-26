@@ -111,10 +111,16 @@ return function(decorate)
      for _,mv in ipairs(m.moves or {})do out[#out+1]=tostring(mv.id)..'='..tostring(mv.pp)end
     end
     for i=1,2 do
-     local v=b[key(side,i)];out[#out+1]=v and v.mon.species or '-'
+     local v=b[key(side,i)];local active=0
+     for j,m in ipairs(party(side))do if v and v.mon==m then active=j;break end end
+     out[#out+1]=tostring(active)..':'..(v and v.mon.species or '-')
      if v then
+      for _,mv in ipairs(v.curMoves or {})do out[#out+1]=tostring(mv.id)..'='..tostring(mv.pp)end
+      out[#out+1]=table.concat(v.curTypes or {},',')
+      for _,k in ipairs({'hp','attack','defense','special','speed'})do out[#out+1]=tostring((v.curStats or {})[k] or 0)end
       for _,k in ipairs({'attack','defense','special','speed','accuracy','evasion'})do out[#out+1]=tostring(v.stages and v.stages[k]or 0)end
-      for _,k in ipairs({'confusedTurns','sleepTurns','toxicCounter','substituteHP','charging','mustRecharge','bideTurns','thrashTurns','trappingTurns'})do out[#out+1]=atom(v[k]or 0)end
+      for _,k in ipairs({'confusedTurns','sleepTurns','toxicCounter','substituteHP','charging','mustRecharge','bideTurns','thrashTurns','trappingTurns','bideDamage','boundTurns','disabledSlot','disabledTurns',
+       'focusEnergy','invulnerable','leechSeeded','lightScreen','reflect','mist','trapDamage','trapMove'})do out[#out+1]=atom(v[k]or 0)end
      end
     end
    end

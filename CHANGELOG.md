@@ -1,3 +1,9 @@
+## 0.12.1 — Gen1 online doubles state validation
+
+Gen1 online double-battle hashes now include active party identity, transformed moves/types/stats and additional persistent effects. Two identical-species party members can no longer exchange active slots without the hash noticing.
+
+Official Gen1Recomp 0.3.20: two local ENet endpoints completed twelve turns through native animation/message queues at unequal update rates. Explicit targets, switching, faints, final hashes, untouched save parties and retained transport passed. A separate fourteen-turn mirrored mechanics fixture also passed. This is same-process endpoint QA, not a claim of exhaustive remote multiplayer or advanced-move coverage.
+
 ## 0.12.0 — 2026-09-22
 
 Includes native FireRed/LeafGreen wild-double introductions showing all four battlers, native trainer/link preservation, and the previously verified Gen1 online faint synchronization and Gen2 double-command fixes. Exhaustive move/disconnect combinations remain unfinished.

@@ -1,6 +1,7 @@
 -- Real official native State and IntroSeq, with deterministic presentation
 -- tweens/audio/UI instead of GPU, ROM or a player's game profile.
 local root=arg[1]or'/tmp/release-031-20260922/engine'
+package.path=root..'/?.lua;'..root..'/?/init.lua;'..package.path
 local n=0
 local function check(v,msg)n=n+1;assert(v,msg)end
 local function stub(k,v)package.loaded[k]=v;return v end

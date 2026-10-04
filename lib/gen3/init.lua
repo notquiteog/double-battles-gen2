@@ -90,7 +90,11 @@ return function(mod)
  local start=Bridge.start
  Bridge.start=function(nativeMod,g,foe,opts)
   opts=opts or{};local session=Runtime.getSession()
-  if opts.link or(foe and foe.link)or not session then return start(nativeMod,g,foe,opts)end
+  -- Emerald has scripted partners, Frontier formats and tutorial battles.
+  -- Preserve their native ownership, including native doubles with no mod.
+  if opts.link or opts.double or opts.twoOpponents or opts.partner or opts.frontier
+   or opts.battleTower or opts.trainerHill or opts.secretBase or opts.tutorialKind
+   or (foe and (foe.link or foe.doubleBattle)) or not session then return start(nativeMod,g,foe,opts)end
   local request
   if opts.wild then
    local context=randomEncounter[foe];randomEncounter[foe]=nil

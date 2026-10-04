@@ -11,6 +11,17 @@ return function(mod,sources)
  local Prize=require('src.core.game3.battle.prize')
  local function copy(t)local c={};for k,v in pairs(t or{})do c[k]=v end;return c end
  local special={[84]=true,[87]=true,[97]=true,[81]=true,[89]=true,[90]=true,[24]=true,[23]=true,[30]=true}
+ local ok,constants=pcall(require,'src.core.game3.constants')
+ if ok then
+  local classes=constants.active():raw('trainer_classes').byName
+  special={}
+  for name,id in pairs(classes)do
+   if name:find('RIVAL') or name:find('LEADER') or name:find('ELITE') or name:find('CHAMPION')
+    or name:find('ADMIN') or name:find('BOSS') or name:find('SALON_MAIDEN') or name:find('DOME_ACE')
+    or name:find('PALACE_MAVEN') or name:find('ARENA_TYCOON') or name:find('FACTORY_HEAD')
+    or name:find('PIKE_QUEEN') or name:find('PYRAMID_KING') then special[id]=true end
+  end
+ end
  local function plain(foe)
   return foe and not special[tonumber(foe.trainerClass)]and not foe.doubleBattle and type(foe.party)=='table'and #foe.party>0
  end

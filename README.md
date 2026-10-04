@@ -1,3 +1,9 @@
+## 0.13.0 — 2026-10-04
+
+Preserve Emerald native doubles, partner battles, Frontier formats and tutorials. Resolve trainer-class exclusions from the active game constants rather than FireRed numeric IDs.
+
+Tested against official Gen1Recomp 0.3.51. Existing games retain their native data and defaults. See Battle Art’s Emerald QA record for the exact integration coverage and remaining gaps.
+
 ## 0.12.0 — 2026-09-22
 
 Includes native FireRed/LeafGreen wild-double introductions showing all four battlers, native trainer/link preservation, and the previously verified Gen1 online faint synchronization and Gen2 double-command fixes. Exhaustive move/disconnect combinations remain unfinished.

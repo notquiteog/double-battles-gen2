@@ -1,6 +1,7 @@
 -- Isolated adapter contracts using the official 0.3.1 State implementation.
 -- No gameplay, display, profile, ROM, save, or network writes.
 local root=arg[1]or'/tmp/release-031-20260922/engine'
+package.path=root..'/?.lua;'..root..'/?/init.lua;'..package.path
 local N=0
 local function check(v,m)N=N+1;assert(v,m)end
 local function stub(name,value)package.loaded[name]=value;return value end
@@ -90,6 +91,12 @@ local before=session.bag.balls;check(choose({kind='bag',itemId=4,battler=0})==fa
 st.enemy.mon.hp=0;st.absent[1]=true;caught=false;local lead=st.enemy
 check(choose({kind='bag',itemId=4,battler=0})==true,'last slot3 breakout handled');check(session.bag.balls==before-1 and st.enemy==lead and not st.over,'breakout preserves live slots and consumes one ball');check(#Battle._actions==1 and Battle._actions[1].battler==3 and Battle._phase=='actions','breakout schedules remaining native foe')
 caught=true;check(choose({kind='bag',itemId=4,battler=0})==true,'last slot3 catch handled');check(stored==State.battler(st,3)and st.result=='catch'and st.wild and Battle._phase=='ending','native catch receives correct mon and completion');check(session.bag.balls==before-2,'one ball per attempt')
+-- Native RSE formats own their roster; automatic pairing must not replace it.
+for _,flag in ipairs({'double','twoOpponents','partner','frontier','battleTower','trainerHill','secretBase','tutorialKind'})do
+ local opts={wild=true};opts[flag]=true
+ local source=mon(19);mod.exports.tagOrganic(source,{terrain='land'});Bridge.start(nil,nil,source,opts)
+ check(seen.foe==source,'native '..flag..' roster preserved')
+end
 local organic=mon(21);mod.exports.tagOrganic(organic,{terrain='air',requirePartnerSource=true})
 st=Bridge.start(nil,nil,organic,{wild=true});check(not st.double,'organic sky without an available source stays exact single')
 mod.exports.registerPartnerSource({id='test-flight',provide=function(_,ctx)if ctx.enemy.mon.species==21 then return 22,9 end end})

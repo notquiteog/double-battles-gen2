@@ -1,3 +1,9 @@
+## 0.13.0 — 2026-10-04
+
+Preserve Emerald native doubles, partner battles, Frontier formats and tutorials. Resolve trainer-class exclusions from the active game constants rather than FireRed numeric IDs.
+
+Tested against official Gen1Recomp 0.3.51. Existing games retain their native data and defaults. See Battle Art’s Emerald QA record for the exact integration coverage and remaining gaps.
+
 ## 0.12.1 — Gen1 online doubles state validation
 
 Gen1 online double-battle hashes now include active party identity, transformed moves/types/stats and additional persistent effects. Two identical-species party members can no longer exchange active slots without the hash noticing.

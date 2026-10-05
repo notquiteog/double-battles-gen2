@@ -2628,7 +2628,12 @@ return function(mod)
         local provider=mod.find("BATTLE_ART_VOXEL_FORK")
         local ex=provider and provider.exports
         local p=ex and ex.battlePresentation
-        return mod.options:get("modern_hud") == true
+        local ui=mod.find("MODERN_POKEMON_UI")
+        local api=ui and ui.exports
+        local ok,on=false,false
+        if api and api.apiVersion==1 and type(api.enabled)=="function"then ok,on=pcall(api.enabled)end
+        return ok and on==true
+          and mod.options:get("modern_hud") == true
           and (not (p and p.modernUIEnabled) or p.modernUIEnabled())
       end, function()
         local provider=mod.find("BATTLE_ART_VOXEL_FORK")

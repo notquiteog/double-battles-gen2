@@ -12,7 +12,12 @@ return function(mod)
   local ex=handle and handle.exports;local presentation=ex and ex.battlePresentation
   if presentation and presentation.nativeHudOwned and presentation.nativeHudOwned()then return native(side,battler,opts)end
   if presentation and presentation.modernUIEnabled and not presentation.modernUIEnabled()then return native(side,battler,opts)end
-  if not(st and mod.options:get('modern_hud')and battler and battler.mon)then return native(side,battler,opts)end
+  local provider=mod.find and mod.find('MODERN_POKEMON_UI')
+  local api=provider and provider.exports
+  local ok,modern=false,false
+  if api and api.apiVersion==1 and type(api.enabled)=='function'then ok,modern=pcall(api.enabled)end
+  modern=ok and modern==true
+  if not(modern and st and mod.options:get('modern_hud')and battler and battler.mon)then return native(side,battler,opts)end
   local id=tonumber(side)or(side=='enemy'and 1 or 0)
   local stage=Anim.stage and Anim.stage();local hb=stage and stage.healthbox and(stage.healthbox[id]or stage.healthbox[side])
   if hb and hb.visible==false then return end

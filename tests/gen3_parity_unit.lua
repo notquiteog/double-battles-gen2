@@ -85,7 +85,10 @@ Prize.awardTrainerWin(session,10,{double=true,moneyMultiplier=2});done('win');ch
 values.trainer_pairs=false;st=Bridge.start(nil,nil,foes[10],{});check(not st.double,'pairs OFF')
 values.trainer_doubles=true;st=Bridge.start(nil,nil,foes[10],{});check(st.double,'trainer 2v2 ON')
 values.double_exp='half';check(hooks['exp.gain'](function()return 81 end,{battle=st})==40,'HALF experience');values.double_exp='full';check(hooks['exp.gain'](function()return 81 end,{battle=st})==81,'FULL experience')
-HB.draw(1,st.enemy,{st=st});check(drawCount>0,'modern HUD draws');values.modern_hud=false;HB.draw(1,st.enemy,{st=st});check(nativeDraws==1,'modern HUD OFF native fallback')
+local oldNative=nativeDraws
+HB.draw(1,st.enemy,{st=st});check(drawCount==0 and nativeDraws==oldNative+1,'native HUD without optional provider')
+mod.find=function(id)if id=='MODERN_POKEMON_UI'then return {exports={apiVersion=1,enabled=function()return true end}}end end
+HB.draw(1,st.enemy,{st=st});check(drawCount>0,'modern HUD draws');values.modern_hud=false;HB.draw(1,st.enemy,{st=st});check(nativeDraws==oldNative+2,'modern HUD OFF native fallback')
 st=Bridge.start(nil,nil,Enc.onStep('r','land'),{wild=true});local choose=mod.exports.gen3Capture.choose
 local before=session.bag.balls;check(choose({kind='bag',itemId=4,battler=0})==false,'two wild targets refuse ball');check(session.bag.balls==before and catchCalls==0,'refusal costs no ball/RNG')
 st.enemy.mon.hp=0;st.absent[1]=true;caught=false;local lead=st.enemy

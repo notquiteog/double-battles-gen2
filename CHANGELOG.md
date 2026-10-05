@@ -1,3 +1,7 @@
+## 0.13.2 — 2026-10-05
+
+Preserve native battle HUD styling unless the optional Modern Pokemon UI provider opts in. No companion is required. Native Gen3 adapter contracts passed against Gen1Recomp 0.3.51. This release does not claim new exhaustive online-battle verification.
+
 ## 0.13.1 — 2026-10-04
 
 Packaging refresh for the coordinated Battle Art 1.31.0 cart release. Runtime behavior is unchanged from 0.13.0. Companions remain optional; no new gameplay or multiplayer verification is claimed. Requires Gen1Recomp 0.3.51 or newer for the bundled carts.

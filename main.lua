@@ -2638,13 +2638,16 @@ return function(mod)
       end, function()
         local provider=mod.find("BATTLE_ART_VOXEL_FORK")
         local ex=provider and provider.exports
-        return ex and ex.battleTheme
+        if ex and ex.battleTheme then return ex.battleTheme end
+        local ui=mod.find("MODERN_POKEMON_UI")
+        local api=ui and ui.exports
+        return api and api.apiVersion==1 and api.battleTheme
       end, function(slot)
         local provider=mod.find("BATTLE_ART_VOXEL_FORK")
         local ex=provider and provider.exports
         local p=ex and ex.battlePresentation
         if p and p.hudAnchor then return p.hudAnchor(slot) end
-      end)
+      end, mod)
     end
   end
 

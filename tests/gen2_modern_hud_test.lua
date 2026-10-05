@@ -92,3 +92,17 @@ assert(table.concat(buttons,',')=='fight,pokemon,bag,run','semantic command orde
 assert(table.concat(labels,','):find('PKMN',1,true),'native Pokemon formatting escaped into UI')
 assert(depth==0)
 print('public theme/anchor providers: four independent overhead cards, command order and clean labels passed')
+
+-- Final composition happens after native letterboxing; stack menus hide cards.
+local Installed={drawEnemyHud=function()end,drawPlayerHud=function()end,drawBottom=function()end}
+Installed.drawSceneBody=function(self)self:drawEnemyHud();self:drawPlayerHud();self:drawBottom(0)end
+local finalHud
+Hud.install(Installed,function()return true end,function()return theme end,nil,
+ {hooks={wrap=function(_,name,fn)assert(name=='render.hud');finalHud=fn end}})
+setmetatable(s,{__index=Installed});anchors={};buttons={};labels={}
+s:drawSceneBody();assert(#labels==0,'window cards painted before final native frame')
+local game={stack={top=function()return s end}}
+finalHud(function()return 'native'end,game);assert(#labels>0,'final window HUD absent')
+labels={};s:drawSceneBody();game.stack.top=function()return{}end
+finalHud(function()end,game);assert(#labels==0,'stale cards covered native party/bag')
+print('window HUD deferred past native frame and hidden by stack menus')

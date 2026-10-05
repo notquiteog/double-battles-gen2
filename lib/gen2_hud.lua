@@ -82,8 +82,9 @@ function M.drawSide(s,side)
    card(s,'enemy',6,6,false)
    if s.battle.enemy2 then card(s,'enemy2',6,31,false) end
   else
-   card(s,'player',M.layout.width-82,M.layout.height-(s.battle.player2 and 106 or 78),true)
-   if s.battle.player2 then card(s,'player2',M.layout.width-82,M.layout.height-78,true) end
+   local footer=themeProvider and themeProvider() and 94 or 78
+   card(s,'player',M.layout.width-82,M.layout.height-footer-(s.battle.player2 and 28 or 0),true)
+   if s.battle.player2 then card(s,'player2',M.layout.width-82,M.layout.height-footer,true) end
   end
  end)
 end
@@ -93,7 +94,7 @@ function M.drawBottom(s)
  if not s:bottomUIVisible() then return true end
  guard(function()
   local theme=themeProvider and themeProvider()
-  love.graphics.translate(theme and M.layout.width-168 or (M.layout.width-160)/2,M.layout.height-158)
+  love.graphics.translate(theme and M.layout.width-168 or (M.layout.width-160)/2,M.layout.height-(theme and 165 or 158))
   if not theme or phase~='menu' then panel(2,100,156,52)end
   if phase=='menu' then
    if theme and theme.commandHub then theme.commandHub(84,129)end
@@ -138,7 +139,7 @@ function M.drawBottom(s)
  end)
  return true
 end
-function M.install(State, enabled, presentationTheme, headAnchor)
+function M.install(State, enabled, presentationTheme, headAnchor, mod)
  allBattles=enabled;themeProvider=presentationTheme;anchorProvider=headAnchor
  if State.modernDoublesHudInstalled then return end
  State.modernDoublesHudInstalled=true
@@ -162,9 +163,21 @@ function M.install(State, enabled, presentationTheme, headAnchor)
  end
  -- Animation BG effects bake the panel into 160x144 before enlarging it.
  -- Keep window-space HUD out of that bake, then composite it once after FX.
+ local pending
+ if mod and mod.hooks then
+  mod.hooks:wrap('render.hud',function(nextFn,game,viewport)
+   local result=nextFn(game,viewport)
+   local s=pending;pending=nil
+   if s and M.active(s) and game.stack and game.stack:top()==s then
+    M.drawSide(s,'enemy');M.drawSide(s,'player');M.drawBottom(s)
+   end
+   return result
+  end)
+ end
  local body=State.drawSceneBody
  if body then
   State.drawSceneBody=function(s,...)
+   pending=nil
    if not M.active(s) then return body(s,...) end
    local previous=s.modernHudDeferred
    s.modernHudDeferred=true
@@ -172,7 +185,8 @@ function M.install(State, enabled, presentationTheme, headAnchor)
    s.modernHudDeferred=previous
    if not ok then error(result,0) end
    if not previous then
-    s:drawEnemyHud();s:drawPlayerHud();s:drawBottom(0)
+    if mod and mod.hooks then pending=s
+    else s:drawEnemyHud();s:drawPlayerHud();s:drawBottom(0)end
    end
    return result
   end

@@ -8,6 +8,8 @@ return function(mod)
  local native=Healthbox.draw
  Healthbox.draw=function(side,battler,opts)
   local st=opts and opts.st or Battle.getState()
+  -- Safari counts balls; tutorials own scripted healthbox reveals.
+  if st and (st.safari or st.pokedude or st.tutorial or st.oldManTutorial)then return native(side,battler,opts)end
   local handle=mod.find and mod.find('BATTLE_ART_VOXEL_FORK')
   local ex=handle and handle.exports;local presentation=ex and ex.battlePresentation
   if presentation and presentation.nativeHudOwned and presentation.nativeHudOwned()then return native(side,battler,opts)end

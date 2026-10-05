@@ -88,7 +88,12 @@ values.double_exp='half';check(hooks['exp.gain'](function()return 81 end,{battle
 local oldNative=nativeDraws
 HB.draw(1,st.enemy,{st=st});check(drawCount==0 and nativeDraws==oldNative+1,'native HUD without optional provider')
 mod.find=function(id)if id=='MODERN_POKEMON_UI'then return {exports={apiVersion=1,enabled=function()return true end}}end end
-HB.draw(1,st.enemy,{st=st});check(drawCount>0,'modern HUD draws');values.modern_hud=false;HB.draw(1,st.enemy,{st=st});check(nativeDraws==oldNative+2,'modern HUD OFF native fallback')
+HB.draw(1,st.enemy,{st=st});check(drawCount>0,'modern HUD draws');
+for _,flag in ipairs({'safari','pokedude','tutorial','oldManTutorial'})do
+ st[flag]=true;local nd,dc=nativeDraws,drawCount;HB.draw('player',st.player,{st=st});check(nativeDraws==nd+1 and drawCount==dc,'native special healthbox '..flag);st[flag]=nil
+end
+oldNative=nativeDraws-1;
+values.modern_hud=false;HB.draw(1,st.enemy,{st=st});check(nativeDraws==oldNative+2,'modern HUD OFF native fallback')
 st=Bridge.start(nil,nil,Enc.onStep('r','land'),{wild=true});local choose=mod.exports.gen3Capture.choose
 local before=session.bag.balls;check(choose({kind='bag',itemId=4,battler=0})==false,'two wild targets refuse ball');check(session.bag.balls==before and catchCalls==0,'refusal costs no ball/RNG')
 st.enemy.mon.hp=0;st.absent[1]=true;caught=false;local lead=st.enemy

@@ -1,3 +1,7 @@
+## 0.13.3 — 2026-10-05
+
+Preserve native Safari and tutorial healthboxes. Compose optional Modern UI after the native Crystal HUD while retaining readable spacing. Companion remains optional; native gameplay and tutorial ownership are preserved.
+
 ## 0.13.2 — 2026-10-05
 
 Preserve native battle HUD styling unless the optional Modern Pokemon UI provider opts in. No companion is required. Native Gen3 adapter contracts passed against Gen1Recomp 0.3.51. This release does not claim new exhaustive online-battle verification.

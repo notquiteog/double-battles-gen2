@@ -1,3 +1,9 @@
+## 0.14.0 — 2026-10-10
+
+Automatic doubles now compose native Gen2 backplates without overlapping sprites or HUDs, and the layout is exposed to optional scene renderers. Gen1 visible spawn encounters are preserved under automatic doubles. Gen3 options wrappers keep native cartridge rows intact and long RS mod option labels stay clear of native value columns.
+
+Verified with the LuaJIT suite (Gen2 native layout, doubles sources, and options tests pass). Companion remains optional; native gameplay and tutorial ownership are preserved.
+
 ## 0.13.3 — 2026-10-05
 
 Preserve native Safari and tutorial healthboxes. Compose optional Modern UI after the native Crystal HUD while retaining readable spacing. Companion remains optional; native gameplay and tutorial ownership are preserved.

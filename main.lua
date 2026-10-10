@@ -2528,85 +2528,10 @@ return function(mod)
     end)
   end
 
-  -- The second foe's HP plate: the enemy HUD's own tile sequence, offset
-  -- four rows down, reading the slot-2 mon through the screen's own
-  -- parametrised state helpers.  The plate's shown-HP key is the slot's
-  -- own ("enemy2"), so the bar reads true values from the first frame.
   if doubles2Gen2 then
-    local okHud, HudState = pcall(require, "src.ui.gen2.BattleState")
-    local okChrome, Chrome = pcall(require, "src.ui.gen2.Chrome")
-    if okHud and okChrome and Chrome and type(HudState.drawEnemyHud) == "function"
-        and not HudState.doublesGen2HudHook then
-      local innerHud = HudState.drawEnemyHud
-      HudState.drawEnemyHud = function(self, ...)
-        local led = innerHud(self, ...)
-        local battle = self.battle
-        local mon = battle and battle.doubles and battle.enemy2
-        if not (mon and (mon.hp or 0) > 0) then return led end
-        if not (self:statusHUDVisible() and self.showEnemyHud
-            and not self:hudCleared("enemy")) then return led end
-        Chrome.printThrough(self:name(mon), 1, 4, Chrome.DEFAULT_BOX_PALETTE)
-        Chrome.printThrough(self:statusTag(mon, "enemy2")
-          or ("<LV>" .. tostring(mon.level or 1)), 6, 5,
-          Chrome.DEFAULT_BOX_PALETTE)
-        local gender = self:genderSymbol(mon)
-        if gender then
-          Chrome.printThrough(gender, 9, 5, Chrome.DEFAULT_BOX_PALETTE)
-        end
-        self:drawHpBar(mon, "enemy2", 2, 6)
-        self:drawFrame(1, 7, 10, false)
-        return led
-      end
-      HudState.doublesGen2HudHook = true
-    end
-  end
-
-  -- Native presentation: when the voxel fork is NOT staging the battle,
-  -- draw the second foe beside the lead on the engine screen itself.  With
-  -- the voxel fork present it composes both mons into its own staged card
-  -- and this wrap stands down (checked per call, so a settings change
-  -- mid-session cannot double-draw). The independent HUD resolves all slots.
-  if doubles2Gen2 then
-    local okBS, BattleState = pcall(require, "src.ui.gen2.BattleState")
-    if okBS and BattleState and type(BattleState.drawPic) == "function"
-        and not BattleState.doublesGen2PicHook then
-      local innerPic = BattleState.drawPic
-      BattleState.drawPic = function(self, mon, back, ...)
-        local battle = self and self.battle
-        local partner = nil
-        local shift = 0
-        if battle and battle.doubles and mon then
-          if mon == battle.doubles.enemy then
-            partner = battle.doubles.enemy2
-            shift = -56 -- toward screen centre, left of the lead
-          elseif mon == battle.doubles.player then
-            partner = battle.doubles.player2
-            shift = 56
-          end
-        end
-        local extra = {}
-        for i = 1, select("#", ...) do extra[i] = select(i, ...) end
-        if not (partner and (partner.hp or 0) > 0) then
-          return innerPic(self, mon, back, unpack(extra))
-        end
-        local exAll = self.game and self.game.mods and self.game.mods.exports
-        if exAll and exAll.BATTLE_ART_VOXEL_FORK then
-          -- the staged card already carries both mons
-          return innerPic(self, mon, back, unpack(extra))
-        end
-        local g = love.graphics
-        local shifted = false
-        if pcall(g.push) then
-          if pcall(g.translate, shift, 0) then
-            shifted = true
-            pcall(innerPic, self, partner, back, unpack(extra))
-          end
-          pcall(g.pop)
-        end
-        local led = innerPic(self, mon, back, unpack(extra))
-        return led
-      end
-      BattleState.doublesGen2PicHook = true
+    local ok, State = pcall(require, "src.ui.gen2.BattleState")
+    if ok and State then
+      assert(load(assert(mod:read("lib/gen2/native_layout.lua")), "@doubles/gen2/native_layout"))().install(State)
     end
   end
 

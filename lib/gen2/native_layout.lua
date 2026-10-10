@@ -9,6 +9,22 @@ end
 function M.install(State)
  if State.nativeDoubleLayoutInstalled then return end
  State.nativeDoubleLayoutInstalled=true
+ -- Optional scene renderers can paint native backplates in exactly this
+ -- layout without depending on the doubles package or guessing its slots.
+ State.drawNativeDoublesBackplates=function(s,drawBox)
+  if not active(s) then return false end
+  for _,side in ipairs({'enemy','player'})do
+   local enemy=side=='enemy'
+   for index=1,2 do
+    if s:activeMon(index==1 and side or side..'2')then
+     transformed(enemy and 2 or 90,enemy and(2+(index-1)*24)or(46+(index-1)*25),
+      enemy and .75 or .625,enemy and 8 or 80,enemy and 0 or 56,
+      function()drawBox(enemy and 0 or 9,enemy and 0 or 6,enemy and 13 or 11,enemy and 4 or 7)end)
+    end
+   end
+  end
+  return true
+ end
  local picture=State.drawPic
  State.drawPic=function(s,mon,back,...)
   if not active(s) or(back and s.showPlayerTrainer)or(not back and s.showEnemyTrainer)then return picture(s,mon,back,...)end

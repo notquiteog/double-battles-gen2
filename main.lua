@@ -2160,23 +2160,21 @@ return function(mod)
       local organic = box.organicUntil and now < box.organicUntil
       local scripted = box.scriptedUntil and now < box.scriptedUntil
       box.organicUntil, box.scriptedUntil = nil, nil
+      local wilds = Game.mods and Game.mods.exports and Game.mods.exports.overworld_wild_spawns
+      if wilds and wilds.logic and wilds.logic.pendingBattle then
+        -- Current engines can enqueue the native encounter without passing
+        -- the older script wrapper. The provider's public pending marker
+        -- still identifies the already-selected visible Pokemon.
+        box.current = nil -- abandon an older optional bird rendezvous
+        mod.log:info("doubles declined: visible/provider-owned battle")
+        return false
+      end
       if scripted and not organic then
-        -- Wilds of Kanto's visible-mon touch battles arrive as scripts
-        -- too, but they're organic encounters.  Its pendingBattle
-        -- marker is set before the battle queues and held through it;
-        -- the touched entity itself is already despawned, so the live
-        -- spawn list can't be trusted for this.
-        local isWilds = false
-        pcall(function()
-          local wilds = Game.mods and Game.mods.exports
-            and Game.mods.exports.overworld_wild_spawns
-          local logic = wilds and wilds.logic
-          if logic and logic.pendingBattle then isWilds = true end
-        end)
-        if not isWilds then
-          mod.log:info("doubles declined: scripted battle (story)")
-          return false
-        end
+        -- The launching script/provider owns its exact encounter. In
+        -- particular, a visible Wilds actor must remain the one touched;
+        -- presence of that optional mod is not permission to add a foe.
+        mod.log:info("doubles declined: scripted/provider-owned battle")
+        return false
       end
       if box.current then
         -- another wild battle (a bump, an interception) beat the

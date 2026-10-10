@@ -74,6 +74,28 @@ local b3 = freshWild("ARTICUNO", 50)
 decorateHook(fakeOw, b3)
 T.check(b3.__double, "without the veto the legendary doubles again")
 
+-- A touched visible spawn is provider-owned, even when that optional mod
+-- advertises a pending encounter. Only an explicit organic tag may opt in.
+local oldMods = fakeGame.mods
+fakeGame.mods = { exports = { overworld_wild_spawns = { logic = { pendingBattle = {} } } } }
+OC.__doubleBattlesPendingBox.scriptedUntil = love.timer.getTime() + 1
+local visible = freshWild("PIDGEY", 7)
+local original = visible.enemy.mon
+decorateHook(fakeOw, visible)
+T.check(not visible.__double and visible.enemy.mon == original,
+  "visible provider encounter retains exactly its supplied enemy")
+OC.__doubleBattlesPendingBox.current = { summonId = "old-bird" }
+local directVisible = freshWild("PIDGEY", 7)
+decorateHook(fakeOw, directVisible)
+T.check(not directVisible.__double,
+  "provider encounter remains owned without the old scripted wrapper")
+T.eq(OC.__doubleBattlesPendingBox.current, nil,
+  "visible encounter abandons older bird rendezvous before its late event")
+fakeGame.mods = oldMods
+local afterVisible = freshWild("PIDGEY", 7)
+decorateHook(fakeOw, afterVisible)
+T.check(afterVisible.__double, "provider guard does not leak into the next organic battle")
+
 -- ------- ally sources
 
 T.eq(api.registerAllySource({

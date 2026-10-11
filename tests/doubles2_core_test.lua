@@ -369,4 +369,53 @@ do -- paired-trainer phazing cannot borrow the other trainer's bench
  T.eq(b.enemy,w,"phazing does not duplicate or replace other active")
 end
 
+do -- native primary plus spread targets spends one PP and respects allegiance
+ for _,id in ipairs({'SURF','EARTHQUAKE','EXPLOSION'})do
+  MOVES[id]={id=id,name=id,power=35,type='NORMAL',accuracy=100,pp=20,
+   effect=id=='EXPLOSION' and 'EFFECT_SELFDESTRUCT' or 'EFFECT_NORMAL_HIT'}
+  local b,p,w,w2=battleWith(true)
+  for _,m in ipairs({p[1],p[2],w,w2})do m.hp=500;m.maxHp=500;m.stats.hp=500 end
+  p[1].moves={{id=id,pp=20,maxPp=20}}
+  doubles2.decorate(b,p[2],w2)
+  b:takeTurn({player={kind='move',move=id,target='player2'},player2={kind='skip'},enemy={kind='skip'},enemy2={kind='skip'}})
+  T.check(w.hp<500 and w2.hp<500,id..' reaches both foes')
+  T.eq(p[1].moves[1].pp,19,id..' uses PP once')
+  T.check(id=='SURF' and p[2].hp==500 or id~='SURF' and p[2].hp<500,id..' preserves correct allied reach')
+  if id=='EXPLOSION'then T.eq(p[1].hp,0,'selfdestruction still reaches remaining targets')end
+ end
+end
+
+do -- ripple retains native Protect and Substitute mechanics
+ local b,p,w,w2=battleWith(true)
+ for _,m in ipairs({p[1],p[2],w,w2})do m.hp=500;m.maxHp=500;m.stats.hp=500 end
+ MOVES.PROTECT={id='PROTECT',name='PROTECT',power=0,type='NORMAL',accuracy=100,pp=10,effect='EFFECT_PROTECT'}
+ p[1].moves={{id='EARTHQUAKE',pp=20,maxPp=20}};p[2].moves={{id='PROTECT',pp=10,maxPp=10}}
+ doubles2.decorate(b,p[2],w2);b:volatile(w2).substitute=100
+ b:takeTurn({player={kind='move',move='EARTHQUAKE'},player2={kind='move',move='PROTECT'},enemy={kind='skip'},enemy2={kind='skip'}})
+ T.eq(p[2].hp,500,'native Protect blocks allied ripple')
+ T.eq(w2.hp,500,'native Substitute absorbs ripple')
+ T.check((b:volatile(w2).substitute or 0)<100,'ripple damages Substitute')
+end
+
+do -- an interrupted action must not create damage-only ripples
+ local b,p,w,w2=battleWith(true)
+ p[1].moves={{id='SURF',pp=15,maxPp=15}};p[1].status='sleep';p[1].statusTurns=3
+ doubles2.decorate(b,p[2],w2);local hp,hp2=w.hp,w2.hp
+ b:takeTurn({player={kind='move',move='SURF'},player2={kind='skip'},enemy={kind='skip'},enemy2={kind='skip'}})
+ T.eq(w.hp,hp,'sleep prevents primary hit');T.eq(w2.hp,hp2,'sleep prevents spread hit')
+ T.eq(p[1].moves[1].pp,15,'sleep prevents PP spend')
+end
+
+do -- native Fly/Dig reachability applies independently to each target
+ local b,p,w,w2=battleWith(true)
+ p[1].moves={{id='SURF',pp=15,maxPp=15}}
+ doubles2.decorate(b,p[2],w2);local hp=w2.hp
+ local state=b:volatile(w2);state.vanished=true;state.chargeMove='FLY'
+ b:takeTurn({player={kind='move',move='SURF'},player2={kind='skip'},enemy={kind='skip'},enemy2={kind='skip'}})
+ T.eq(w2.hp,hp,'Surf ripple does not hit a flying target')
+ T.check(not doubles2.registerSpreadMove('CUSTOM','self'),'bad extension kind refused')
+ T.check(doubles2.registerSpreadMove('CUSTOM','others'),'public spread extension accepted')
+ T.eq(doubles2.spreadKind('CUSTOM'),'others','extension has a live core consumer')
+end
+
 T.finish("double battles gen2 core")

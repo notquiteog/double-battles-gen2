@@ -36,3 +36,10 @@ press('down');assert(s.doubleTargetSlot=='player');press('b')
 lead.hp=0;s.phase='moves';s:submit({kind='move',move='TACKLE'})
 press('down');assert(s.doubleTargetSlot=='enemy','fainted partner excluded')
 print('Gen2 ally row, canonical partner commands and remembered foe PASS')
+local spreadSubmitted
+local SpreadState={submit=function(_,a)spreadSubmitted=a end,update=function()end}
+Target.install(SpreadState,function(id)return id=='SURF'and'foes'end)
+local spread=setmetatable({phase='moves',battle=s.battle},{__index=SpreadState})
+spread:submit({kind='move',move='SURF'})
+assert(spreadSubmitted and spread.phase=='moves','spread move should not ask for a single target')
+print('Gen2 spread prompt bypass PASS')

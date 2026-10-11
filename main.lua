@@ -2564,6 +2564,7 @@ return function(mod)
                tostring(mod.options:get("gen2_doubles")))
   if doubles2Gen2 and require("src.core.GameVersion").generation()==2 then
     mod.exports.online=assert(load(assert(mod:read("lib/gen2_online.lua")),"@doubles/gen2_online"))()(doubles2Gen2)
+    mod.exports.registerSpreadMove=doubles2Gen2.registerSpreadMove
   end
   if doubles2Gen2 then
     local ok, State=pcall(require,"src.ui.gen2.BattleState")
@@ -2571,7 +2572,7 @@ return function(mod)
     if ok and State and source then
       assert(load(assert(mod:read("lib/gen2/commands.lua")),"@doubles/gen2/commands"))().install(State)
       local target=assert(mod:read("lib/gen2_target.lua"))
-      assert(load(target,"@double_battles/lib/gen2_target.lua"))().install(State)
+      assert(load(target,"@double_battles/lib/gen2_target.lua"))().install(State,doubles2Gen2.spreadKind)
       assert(load(source,"@double_battles/lib/gen2_hud.lua"))().install(State, function()
         local provider=mod.find("BATTLE_ART_VOXEL_FORK")
         local ex=provider and provider.exports

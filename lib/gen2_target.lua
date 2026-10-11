@@ -13,7 +13,7 @@ function M.targets(battle)
  if partner and (partner.hp or 0)>0 then out[#out+1]=ally end
  return out
 end
-function M.install(State)
+function M.install(State,isSpread)
  if State.doublesGen2TargetHook then return end
  State.doublesGen2TargetHook=true
  local submit,update=State.submit,State.update
@@ -39,7 +39,8 @@ function M.install(State)
  function State:submit(action)
   local b=self.battle
   if b and b.doubles and b.doubles.takeTurn and not b.over and (not self.link or self.doubleLink)
-      and action and action.kind=='move' and not action.target then
+      and action and action.kind=='move' and not action.target
+      and not(isSpread and isSpread(action.move))then
    local targets=self:doubleTargets()
    if #targets>1 then
     self.doublePendingAction={}

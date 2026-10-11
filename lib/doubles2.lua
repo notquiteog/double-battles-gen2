@@ -44,6 +44,15 @@ local function engine()
   return Battle
 end
 
+-- Match the Gen1 companion's spread policy: full native primary hit and
+-- three-quarter secondary hits, without applying secondary effects twice.
+local SPREAD={SURF='foes',BLIZZARD='foes',ROCK_SLIDE='foes',
+ EARTHQUAKE='others',EXPLOSION='others',SELFDESTRUCT='others'}
+function M.spreadKind(id)return SPREAD[id]end
+function M.registerSpreadMove(id,kind)
+ if type(id)~='string' or (kind~='foes' and kind~='others')then return false,'move id and foes/others kind required'end
+ SPREAD[id]=kind;return true
+end
 local SLOTS = { "player", "player2", "enemy", "enemy2" }
 local MIRROR_SLOTS = { "enemy", "enemy2", "player", "player2" }
 local function slotOrder(battle)return battle.linkBattle and battle.mirrored and MIRROR_SLOTS or SLOTS end
@@ -252,6 +261,7 @@ local function attack(battle, actor, defender)
     if interrupted then return end
   end
   battle:useMove(mon, defender, move)
+  return move
 end
 
 -- Resolve an action's defender at the moment it fires: a named target that
@@ -261,6 +271,8 @@ local function defenderFor(battle, actor, targetSlot)
   local d = battle.doubles
   local side = (actor.slot == "player" or actor.slot == "player2")
     and "enemy" or "player"
+  local move=battle:forcedMove(actor.mon) or battle:volatile(actor.mon).chargeMove or actor.move
+  if SPREAD[move]then targetSlot=nil end
   if targetSlot and targetSlot:match('^'..actor.slot:gsub('2$',''))then
     if targetSlot==actor.slot then return nil end
     local mon=d[targetSlot]
@@ -273,6 +285,39 @@ local function defenderFor(battle, actor, targetSlot)
     if mon and (mon.hp or 0) > 0 then return mon, slot end
   end
   return nil
+end
+
+-- A ripple is another target of the same action, not another move use:
+-- one PP/obedience/status gate, native accuracy/damage/defensive mechanics.
+local function spread(b,actor,primary,moveId)
+ local kind=SPREAD[moveId];local def=moveId and b:moveDef(moveId)
+ if not kind or not def or (def.power or 0)<=0 then return end
+ local own=actor.slot:gsub('2$','')
+ for _,slot in ipairs(slotOrder(b))do
+  local mon=b.doubles[slot]
+  if mon and mon~=actor.mon and mon~=primary and (mon.hp or 0)>0
+      and (kind=='others' or slot:gsub('2$','')~=own)then
+   context(b,actor.slot,slot,function()
+    local state=b:volatile(mon)
+    if state.protect then
+     b:emit({kind='message',text=Strings('%s protected itself!',b:monName(mon))});return
+    end
+    local locked=b:consumeLockOn(mon)
+    local through=locked and not(state.chargeMove=='FLY' and Battle.LOCK_ON_GROUND_MOVES[moveId])
+    if state.vanished and not through and not Effects.hitsVanished(state.chargeMove,moveId)then return end
+    if not (locked or b:volatile(actor.mon).xAccuracy or b:accuracyRoll(def,actor.mon,mon))then return end
+    b:emit({kind='message',text=Strings('It also hit\n%s!',b:monName(mon))})
+    local deal,event=b.dealDamage,b.moveEvent
+    b.moveEvent=nil
+    b.dealDamage=function(self,attacker,target,damage,opts)
+     return deal(self,attacker,target,math.floor((damage or 0)*.75),opts)
+    end
+    local ok,err=pcall(b.hitOnce,b,actor.mon,mon,def,{moveId=moveId})
+    b.dealDamage,b.moveEvent=deal,event
+    if not ok then error(err,0)end
+   end)
+  end
+ end
 end
 
 -- End-of-round: bench members walk into empty slots (the cart's own send
@@ -508,7 +553,8 @@ function M.takeTurn2v2(self, actions)
       local defender, defSlot = defenderFor(self, ma, ma.target)
       if defender then
         if sweepFaints(self) then return self:takeEvents() end
-        context(self,ma.slot,defSlot,function()return attack(self,ma,defender)end)
+        local used=context(self,ma.slot,defSlot,function()return attack(self,ma,defender)end)
+        if used and not self.over then spread(self,ma,defender,used)end
         if self.over then break end
         if sweepFaints(self) then return self:takeEvents() end
       end

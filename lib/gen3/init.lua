@@ -24,6 +24,7 @@ return function(mod)
  }
  mod.options:define(schema)
  part('lib/InGameOptions.lua').install(mod,schema,'DOUBLE BATTLES')
+ part('lib/gen3/target.lua').install(require('src.core.game3.battle.ui'))
  local function opt(k)return mod.options:get(k)end
  local function copy(t)local out={};for k,v in pairs(t or{})do out[k]=v end;return out end
  local function usable(m)return m and not m.isEgg and not m.egg and(tonumber(m.hp)or 1)>0 end

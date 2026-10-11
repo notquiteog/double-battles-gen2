@@ -1,3 +1,7 @@
+## Unreleased
+
+Gen3 target selection now uses battlefield rows: Left/Right stays among enemies, Down selects the allied row, and Up returns to the previous enemy. Horizontal input never crosses into or cycles the allied row, even when a custom move permits self-targeting. Native move eligibility, confirmation, cancellation and absent-slot handling remain authoritative. Focused navigation and57 native adapter contracts pass; actual LeafGreen and Emerald trainer doubles, partner commands and cancellation pass on0.3.74. Gen1/2 ally-target resolver/wire support is still separate unfinished work.
+
 ## 0.14.0 — 2026-10-10
 
 Automatic doubles now compose native Gen2 backplates without overlapping sprites or HUDs, and the layout is exposed to optional scene renderers. Gen1 visible spawn encounters are preserved under automatic doubles. Gen3 options wrappers keep native cartridge rows intact and long RS mod option labels stay clear of native value columns.

@@ -296,6 +296,7 @@ return function(mod)
   -- hits everyone but the user (your partner included, Earthquake
   -- style).  The primary target gets the full move; the ripple hits
   -- land at three quarters damage with no secondary effects.
+  local Spread=assert(load(assert(mod:read('lib/gen1_spread.lua')),'@doubles/gen1_spread'))()
   local SPREAD = {
     SURF = "foes", BLIZZARD = "foes", ROCK_SLIDE = "foes",
     EARTHQUAKE = "others", EXPLOSION = "others", SELFDESTRUCT = "others",
@@ -1441,17 +1442,27 @@ return function(mod)
             -- instead of allowing friendly Roar to end a wild double.
             self.kind = "trainer"
           end
+          local performed
+          local perform=self.performMove
+          self.performMove=function(owner,attacker,defender,action,...)
+            if attacker==user then
+              local kind=SPREAD[action.id]
+              performed=kind and {action=action,target=defender,kind=kind,
+                targets=Spread.targets(owner,attacker,defender,kind)} or nil
+            end
+            return perform(owner,attacker,defender,action,...)
+          end
           local okX, err = pcall(self.executeAction, self, user, target,
                                  entry.action)
+          self.performMove=perform
           self.kind = kindBefore
           if not okX then
             mod.log:warn("double action failed: %s", tostring(err))
           end
-          local kind = okX and entry.action and entry.action.id
-            and SPREAD[entry.action.id]
-          if kind then
+          if okX and performed then
             self:actNext(function()
-              self:__dbSpreadRipple(user, target, entry.action, kind)
+              self:__dbSpreadRipple(user,performed.target,performed.action,
+                performed.kind,performed.targets)
             end)
           end
         end)
@@ -1472,52 +1483,8 @@ return function(mod)
 
     -- spread ripple: every other battler the move reaches takes a
     -- reduced hit through the engine's own accuracy and damage rolls
-    battle.__dbSpreadRipple = function(self, user, primary, action, kind)
-      if self.result or not alive(user) then return end
-      local move = self.data.moves[action.id]
-      if not move or (move.power or 0) <= 0 then return end
-      local extras = {}
-      local function add(b)
-        if b and b ~= primary and b ~= user and alive(b) then
-          extras[#extras + 1] = b
-        end
-      end
-      local onMySide = (user == self.player or user == self.player2)
-      if onMySide then
-        add(self.enemy)
-        add(self.enemy2)
-        if kind == "others" then
-          add(user == self.player2 and self.player or self.player2)
-        end
-      else
-        add(self.player)
-        add(self.player2)
-        if kind == "others" then
-          add(user == self.enemy2 and self.enemy or self.enemy2)
-        end
-      end
-      for _, victim in ipairs(extras) do
-        if alive(user) and alive(victim) then
-          local hit = true
-          pcall(function()
-            hit = self:accuracyRoll(move, user, victim) and true or false
-          end)
-          if hit then
-            local dmg = 0
-            local okD = pcall(function()
-              dmg = self:computeDamage(user, victim, move) or 0
-            end)
-            dmg = math.floor((tonumber(dmg) or 0) * 0.75)
-            if okD and dmg > 0 then
-              self:sayNext(Strings("It also hit\n%s!",
-                Sky.monName(self.data, victim.mon)))
-              victim.mon.hp = math.max(0, victim.mon.hp - dmg)
-              self:drainNext()
-              if victim.mon.hp <= 0 then self:onFaint(victim) end
-            end
-          end
-        end
-      end
+    battle.__dbSpreadRipple = function(self,user,primary,action,kind,targets)
+      return Spread.ripple(self,user,primary,action,kind,targets)
     end
 
     -- the engine's residualFor refuses battlers it doesn't know, so

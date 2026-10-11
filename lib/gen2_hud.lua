@@ -58,11 +58,21 @@ local function card(s,slot,x,y,ally)
  if anchorProvider then ax,ay=anchorProvider(slot)end
  if ax and ay and theme and theme.aboveHead then
   ax,ay=ax/M.layout.scale,ay/M.layout.scale
-  x,y=theme.aboveHead(ax,ay,76,ally and 26 or 22,M.layout.width,M.layout.height)
-  theme.statusCard(x,y,76,ally and 26 or 22,ax,s.phase=='db2_target' and s.battle.doubles and s.battle.doubles[s.doubleTargetSlot]==mon)
- else panel(x,y,76,ally and 26 or 22,s.phase=='db2_target' and s.battle.doubles and s.battle.doubles[s.doubleTargetSlot]==mon)end
+  x,y=theme.aboveHead(ax,ay,76,ally and 29 or 26,M.layout.width,M.layout.height)
+  theme.statusCard(x,y,76,ally and 29 or 26,ax,s.phase=='db2_target' and s.battle.doubles and s.battle.doubles[s.doubleTargetSlot]==mon)
+ else panel(x,y,76,ally and 29 or 26,s.phase=='db2_target' and s.battle.doubles and s.battle.doubles[s.doubleTargetSlot]==mon)end
  label(s:name(mon),x+3,y+2,49)
  label('Lv.'..tostring(mon.level or 1),x+53,y+2,21)
+ if theme and theme.gender then theme.gender(mon.gender,x+4,y+17)
+ elseif mon.gender=='male'or mon.gender=='female'then label(mon.gender=='male'and'♂'or'♀',x+3,y+17,10)end
+ if not ally and s.battle.wild and s.dexCaught and s:dexCaught(mon)then
+  if theme and theme.caught then theme.caught(x+15,y+18)else label('●',x+15,y+17,8)end
+ end
+ if slot=='player'then
+  local length=require('src.ui.gen2.BattleHud').EXP_LENGTH_PX
+  love.graphics.setColor(.20,.27,.29,1);love.graphics.rectangle('fill',x+3,y+27,70,1)
+  love.graphics.setColor(.24,.57,.81,1);love.graphics.rectangle('fill',x+3,y+27,70*math.max(0,math.min(1,(s.shownExp or 0)/length)),1)
+ end
  local status=s:statusTag(mon,slot)
  label(status or (theme and 'HP' or ally and 'HP' or (s.battle.trainer and 'FOE' or 'WILD')),x+3,y+11,20)
  local G=love.graphics

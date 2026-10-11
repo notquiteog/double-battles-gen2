@@ -1,3 +1,4 @@
+package.loaded['src.ui.gen2.BattleHud']={EXP_LENGTH_PX=72}
 local width,height=2560,1440
 local requested,depth,rects={},0,0
 love={graphics={}}

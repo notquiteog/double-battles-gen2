@@ -1,3 +1,7 @@
+## 0.14.1 — 2026-10-11
+
+Restore gender, caught indicators and EXP on Gen2 cards; correct directional target selection and Gen1/2 spread-move resolution. Native paired ENet lifecycle and Gen3 trainer doubles checked, including replacements. This does not certify every move or internet condition.
+
 ## Unreleased
 
 Fix Gen1 spread-move multiplayer desynchronization: secondary damage now uses the battle's seeded RNG and an actor-relative target order on both peers. Interrupted moves no longer produce a damage-only ripple; Explosion retains its snapshotted secondary targets after the user faints. Extra hits use native Substitute/Bide damage, Rage, the Counter register and damage events instead of direct HP subtraction. Red/Blue/Yellow each complete a 10-turn real ENet sleep/Surf regression with identical hashes on 0.3.74; Red additionally verifies Explosion secondary damage and faint replacement. Focused Substitute, invulnerability and mirrored target-order checks pass; this remains targeted verification, not every move combination.

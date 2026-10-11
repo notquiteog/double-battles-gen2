@@ -63,9 +63,10 @@ When the lead foe faints, the second steps up and the battle carries on
 as a normal 1v1, so catching and running work as usual from there.
 
 When you pick a move with both foes up, a target prompt follows: a
-menu names both Pokémon with a cursor on your aim (a blinking frame
-marks the sprite too), any direction key moves the cursor, A locks it
-in, B goes back to the move menu. Throwing a ball opens the same
+menu names the Pokémon with a cursor on your aim (a blinking frame
+marks the sprite too). Left/Right switches between enemies; Down selects
+your teammate and Up returns to the enemy row. A confirms and B returns
+to the move menu. Throwing a ball opens the same
 prompt: aim at the Pokémon you want, A throws, B puts the ball back
 in the bag. Catching one ends the battle and the other flees.
 

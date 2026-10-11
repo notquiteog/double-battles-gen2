@@ -22,7 +22,7 @@ return function(decorate)
     else
      local slot
      for j,m in ipairs(e.user.curMoves)do if m==action or m.id==action.id then slot=j;break end end
-     out[i]={kind=action.struggle and 'struggle'or b:lockedAction(e.user) and 'locked'or'move',slot=slot,target=e.target==b.enemy2 and 2 or 1}
+     out[i]={kind=action.struggle and 'struggle'or b:lockedAction(e.user) and 'locked'or'move',slot=slot,target=e.target==b.player and 3 or e.target==b.player2 and 4 or e.target==b.enemy2 and 2 or 1}
     end
    end
    return out
@@ -48,8 +48,9 @@ return function(decorate)
       elseif w.kind=='move'and type(w.slot)=='number'and w.slot%1==0 then
        local mv=user.curMoves[w.slot];if mv and (mv.pp or 0)>0 and not locked then e.action=mv end
       end
-      if not e.action or (w.target~=1 and w.target~=2)then return nil,'Invalid move or target.'end
-      e.target=b[key(foes,w.target)]
+      if not e.action or type(w.target)~='number'or w.target%1~=0 or w.target<1 or w.target>4 or w.target==i+2 then return nil,'Invalid move or target.'end
+      e.target=b[key(w.target>2 and side or foes,w.target>2 and w.target-2 or w.target)]
+      if w.target>2 and not alive(e.target)then return nil,'Unavailable teammate.'end
      end
     end
    end

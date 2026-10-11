@@ -59,8 +59,8 @@ local function card(s,slot,x,y,ally)
  if ax and ay and theme and theme.aboveHead then
   ax,ay=ax/M.layout.scale,ay/M.layout.scale
   x,y=theme.aboveHead(ax,ay,76,ally and 26 or 22,M.layout.width,M.layout.height)
-  theme.statusCard(x,y,76,ally and 26 or 22,ax,s.phase=='db2_target' and s.doubleTargetSlot==slot)
- else panel(x,y,76,ally and 26 or 22,s.phase=='db2_target' and s.doubleTargetSlot==slot)end
+  theme.statusCard(x,y,76,ally and 26 or 22,ax,s.phase=='db2_target' and s.battle.doubles and s.battle.doubles[s.doubleTargetSlot]==mon)
+ else panel(x,y,76,ally and 26 or 22,s.phase=='db2_target' and s.battle.doubles and s.battle.doubles[s.doubleTargetSlot]==mon)end
  label(s:name(mon),x+3,y+2,49)
  label('Lv.'..tostring(mon.level or 1),x+53,y+2,21)
  local status=s:statusTag(mon,slot)
@@ -107,8 +107,10 @@ function M.drawBottom(s)
    end
   elseif phase=='db2_target' then
    label('CHOOSE TARGET   A: Confirm   B: Back',7,102,146)
-   for i,slot in ipairs(s:doubleTargets()) do
-    local mon=s:activeMon(slot)
+   local row={}
+   for _,slot in ipairs(s:doubleTargets())do if slot:sub(1,1)==s.doubleTargetSlot:sub(1,1)then row[#row+1]=slot end end
+   for i,slot in ipairs(row) do
+    local mon=s.battle.doubles[slot] or s:activeMon(slot)
     local x=5+(i-1)*77
     local selected=s.doubleTargetSlot==slot
     panel(x,114,73,24,selected)

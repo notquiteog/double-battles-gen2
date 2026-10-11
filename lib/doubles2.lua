@@ -59,11 +59,25 @@ local function context(b,first,second,fn)
  for _,key in ipairs({first or '',second or ''})do
   if key=='player'or key=='player2'then pk=key elseif key=='enemy'or key=='enemy2'then ek=key end
  end
+ local sameSide=first and second and first~=second and first:gsub('2$','')==second:gsub('2$','')
+ if sameSide then
+  if first:match('^player')then pk,ek=first,second else pk,ek=second,first end
+ end
  local op,oe=b.player,b.enemy
  local opk,oek=slotOf(b,op),slotOf(b,oe)
  local pi,ei=b.playerIndex,b.enemyIndex
  local ps,es=b.stages.player,b.stages.enemy
  local rewrite=d.rewrite
+ local oldScreens,oldSpikes,oldParty,oldEnemyParty=b.screens,b.spikes,b.party,b.enemyParty
+ if sameSide then
+  local owner=first:gsub('2$','')
+  local function remap(t)
+   return t and setmetatable({}, {__index=function(_,k)return t[(k=='player'or k=='enemy')and owner or k]end,
+    __newindex=function(_,k,v)t[(k=='player'or k=='enemy')and owner or k]=v end})
+  end
+  b.screens,b.spikes=remap(oldScreens),remap(oldSpikes)
+  b.party,b.enemyParty=owner=='player'and oldParty or oldEnemyParty,owner=='player'and oldParty or oldEnemyParty
+ end
  b.player,b.enemy=d[pk],d[ek];b.playerIndex,b.enemyIndex=d.index[pk],d.index[ek]
  b.stages.player,b.stages.enemy=d.stages[pk],d.stages[ek]
  d.rewrite={player=pk,enemy=ek}
@@ -75,6 +89,7 @@ local function context(b,first,second,fn)
  b.playerIndex,b.enemyIndex=opk and d.index[opk]or pi,oek and d.index[oek]or ei
  b.stages.player,b.stages.enemy=opk and d.stages[opk]or ps,oek and d.stages[oek]or es
  b.stages.player2,b.stages.enemy2=d.stages.player2,d.stages.enemy2
+ b.screens,b.spikes,b.party,b.enemyParty=oldScreens,oldSpikes,oldParty,oldEnemyParty
  d.rewrite=rewrite
  if not ok then error(result,0)end
  return result
@@ -246,6 +261,11 @@ local function defenderFor(battle, actor, targetSlot)
   local d = battle.doubles
   local side = (actor.slot == "player" or actor.slot == "player2")
     and "enemy" or "player"
+  if targetSlot and targetSlot:match('^'..actor.slot:gsub('2$',''))then
+    if targetSlot==actor.slot then return nil end
+    local mon=d[targetSlot]
+    return mon and (mon.hp or 0)>0 and mon or nil,targetSlot
+  end
   local other=side.."2"
   local order = targetSlot==other and {other,side} or {side,other}
   for _, slot in ipairs(order) do
@@ -587,7 +607,31 @@ function M.decorate(battle, secondPlayer, secondEnemy, options)
   local engineUseMove = battle.useMove
   battle.useMove = function(self, attacker, defender, moveId)
     return context(self,slotOf(self,attacker),slotOf(self,defender),function()
-      return engineUseMove(self,attacker,defender,moveId)
+      local def=self:moveDef(moveId)
+      if not (def and def.effect=='EFFECT_FORCE_SWITCH') then
+        return engineUseMove(self,attacker,defender,moveId)
+      end
+      -- Native singles phazing must not choose either occupied doubles slot.
+      -- Roaring an ally in a wild encounter switches that ally, never flees.
+      local wild,party,enemyParty=self.wild,self.party,self.enemyParty
+      local a,t=slotOf(self,attacker),slotOf(self,defender)
+      local friendly=a and t and a:gsub('2$','')==t:gsub('2$','')
+      local targetParty=defender==self.player and party or enemyParty
+      local function benchOnly(source)
+        local result={}
+        for i,mon in ipairs(source or {})do
+          local wrongOwner=source==targetParty and t and t:match('^enemy')
+            and d2.enemyOwner and d2.enemyOwner[i]~=t
+          result[i]=(slotOf(self,mon) or wrongOwner) and {hp=0} or mon
+        end
+        return result
+      end
+      self.party,self.enemyParty=benchOnly(party),benchOnly(enemyParty)
+      if friendly then self.wild=false end
+      local ok,result=pcall(engineUseMove,self,attacker,defender,moveId)
+      self.wild,self.party,self.enemyParty=wild,party,enemyParty
+      if not ok then error(result,0)end
+      return result
     end)
   end
   local engineSpeed=battle.effectiveSpeed

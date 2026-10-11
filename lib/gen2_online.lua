@@ -22,10 +22,11 @@ return function(Core)
   local function mon(side,index)return b.doubles[side..(index==2 and '2'or '')]end
   function A.encode(action,index)
    local m=mon('player',index)
+   local target=({enemy=1,enemy2=2,player=3,player2=4})[action.target]or 1
    if action.kind=='switch'then return {kind='switch',index=action.index}end
    if action.kind~='move'then return nil,'No items or running in link battles.'end
-   for i,move in ipairs(m.moves or {})do if move.id==action.move then return {kind='move',move=i,target=action.target=='enemy2'and 2 or 1}end end
-   if action.move=='STRUGGLE'then return {kind='struggle',target=action.target=='enemy2'and 2 or 1}end
+   for i,move in ipairs(m.moves or {})do if move.id==action.move then return {kind='move',move=i,target=target}end end
+   if action.move=='STRUGGLE'then return {kind='struggle',target=target}end
    return nil,'Choose a known move.'
   end
   function A.decode(rows,side)
@@ -45,8 +46,12 @@ return function(Core)
       local locked=move and (b:forcedMove(m)==move.id or b:lockedInMove(m)==move.id or b:volatile(m).chargeMove==move.id)
       if w.kind=='move'and (not move or ((move.pp or 0)<=0 and not locked))then return nil,'Invalid move slot.'end
       if w.kind=='struggle'and b:hasUsableMoves(m)then return nil,'Struggle is unavailable.'end
-      if w.target~=1 and w.target~=2 then return nil,'Invalid target.'end
-      out[key]={kind='move',move=move and move.id or 'STRUGGLE',target=(side=='player'and'enemy'or'player')..(w.target==2 and'2'or'')}
+      if type(w.target)~='number'or w.target%1~=0 or w.target<1 or w.target>4 or w.target==i+2 then return nil,'Invalid target.'end
+      local targetSide=w.target>2 and side or(side=='player'and'enemy'or'player')
+      local targetIndex=w.target>2 and w.target-2 or w.target
+      local targetMon=mon(targetSide,targetIndex)
+      if w.target>2 and(not targetMon or targetMon.hp<=0)then return nil,'Unavailable teammate.'end
+      out[key]={kind='move',move=move and move.id or 'STRUGGLE',target=targetSide..(targetIndex==2 and'2'or'')}
      else return nil,'Invalid action kind.'end
     end
    end

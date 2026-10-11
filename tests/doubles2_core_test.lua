@@ -325,4 +325,48 @@ do -- a living ally steps into a fainted lead's native menu position
  T.eq(battle.doubles.index.player,2,"survivor keeps correct party index")
 end
 
+do -- friendly damage binds the actual defender's stages and side screens
+ local b,p,w,w2=battleWith(true)
+ doubles2.decorate(b,p[2],w2)
+ local hp,enemyHp=p[2].hp,w.hp
+ local screens,party,foes=b.screens,b.party,b.enemyParty
+ b:useMove(p[1],p[2],'TACKLE')
+ T.check(p[2].hp<hp,"chosen teammate takes damage")
+ T.eq(w.hp,enemyHp,"friendly target leaves enemy alone")
+ T.eq(b.player,p[1],"friendly context restores lead")
+ T.eq(b.enemy,w,"friendly context restores foe")
+ T.eq(b.screens,screens,"friendly screen mapping restored")
+ T.eq(b.party,party,"friendly party mapping restored")
+ T.eq(b.enemyParty,foes,"enemy party mapping restored")
+ local plain=hp-p[2].hp
+ p[2].hp=hp;b.screens.player.reflect=5
+ b:useMove(p[1],p[2],'TACKLE')
+ T.check(hp-p[2].hp<plain,"friendly damage respects own Reflect")
+end
+
+do -- ally Roar must draw from the bench, never flee or duplicate an active
+ local b,p,w,w2=battleWith(true)
+ MOVES.ROAR={id='ROAR',name='ROAR',power=0,type='NORMAL',accuracy=100,pp=20,effect='EFFECT_FORCE_SWITCH'}
+ p[1].moves[3]={id='ROAR',pp=20,maxPp=20}
+ doubles2.decorate(b,p[2],w2)
+ b:useMove(p[1],p[2],'ROAR')
+ T.check(not b.over,"friendly Roar does not end wild battle")
+ T.eq(b.player,p[1],"Roar does not remove attacker")
+ T.eq(b.player2,p[3],"Roar selects genuine bench member")
+ T.eq(b.party,p,"Roar restores original party array")
+ T.eq(b.wild,true,"Roar restores wild flag")
+end
+
+do -- paired-trainer phazing cannot borrow the other trainer's bench
+ local b,p,w,w2=battleWith(true)
+ local benchA,benchB=mon('SPEAROW',10),mon('RATTATA',10)
+ b.enemyParty={w,w2,benchA,benchB};b.wild=false
+ p[1].moves[3]={id='ROAR',pp=20,maxPp=20}
+ doubles2.decorate(b,p[2],w2)
+ b.doubles.enemyOwner={[1]='enemy',[2]='enemy2',[3]='enemy',[4]='enemy2'}
+ b:useMove(p[1],w2,'ROAR')
+ T.eq(b.enemy2,benchB,"phazing preserves second trainer's ownership")
+ T.eq(b.enemy,w,"phazing does not duplicate or replace other active")
+end
+
 T.finish("double battles gen2 core")

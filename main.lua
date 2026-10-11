@@ -876,7 +876,7 @@ return function(mod)
         self.__dbAimSwapped = not self.__dbAimSwapped or nil
         self:syncSides()
       end
-      self.__dbAimBattler = self.enemy
+      self.__dbAimBattler = target == self.player2 and target or self.enemy
       self.enemy.shownHP = self.enemy.mon.hp
       self.enemy.shownStatus = self.enemy.mon.status
     end
@@ -1221,8 +1221,9 @@ return function(mod)
       -- (update/overlay decorations own the db_target phase)
       if not self.__dbResolving and playerAction and playerAction.id and not self.__dbTarget
          and not SPREAD[playerAction.id]
-         and alive(self.enemy2) and alive(self.enemy) then
+         and alive(self.enemy) and (alive(self.enemy2) or alive(self.player2)) then
         self.__dbPending = playerAction
+        self.__dbAimFoe = self.enemy
         self:__dbAimAt(self.enemy)
         self.phase = "db_target"
         return
@@ -1411,6 +1412,9 @@ return function(mod)
           end
           local onMySide = (user == self.player or user == self.player2)
           if not alive(target) then
+            -- A selected teammate may faint before this action. Never turn
+            -- that friendly action into an attack on the opposing side.
+            if target and target.isPlayer == user.isPlayer then return end
             if onMySide then
               target = alive(self.enemy) and self.enemy or self.enemy2
             else
@@ -1428,8 +1432,18 @@ return function(mod)
             or (target == self.player2 or user == self.player2)
               and self.player2
             or nil
+          local kindBefore = self.kind
+          local move = entry.action and self.data.moves[entry.action.id]
+          if user.isPlayer == target.isPlayer and move
+             and move.effect == "SWITCH_AND_TELEPORT_EFFECT"
+             and entry.action.id ~= "TELEPORT" then
+            -- Gen 1 has no trainer phazing; preserve its native failure
+            -- instead of allowing friendly Roar to end a wild double.
+            self.kind = "trainer"
+          end
           local okX, err = pcall(self.executeAction, self, user, target,
                                  entry.action)
+          self.kind = kindBefore
           if not okX then
             mod.log:warn("double action failed: %s", tostring(err))
           end
@@ -1628,9 +1642,17 @@ return function(mod)
         return origUpdate(self, dt)
       end
       local input = self.game.input
-      if input:wasPressed("left") or input:wasPressed("right")
-         or input:wasPressed("up") or input:wasPressed("down") then
-        self:__dbAimAt(self.enemy2)
+      if input:wasPressed("left") or input:wasPressed("right") then
+        if self.__dbAimBattler ~= self.player2 then
+          self:__dbAimAt(self.enemy2)
+        end
+      elseif input:wasPressed("down") then
+        if not self.__dbPendingBall and alive(self.player2) then
+          if self.__dbAimBattler ~= self.player2 then self.__dbAimFoe = self.__dbAimBattler end
+          self:__dbAimAt(self.player2)
+        end
+      elseif input:wasPressed("up") then
+        self:__dbAimAt(alive(self.__dbAimFoe) and self.__dbAimFoe or self.enemy)
       elseif input:wasPressed("a") then
         if self.__dbPendingBall then
           self:__dbBallConfirm()
@@ -1808,7 +1830,7 @@ return function(mod)
   -- other battle menu does there).
   local function drawAimMenu(battle, first, second, aimed)
     pcall(function()
-      if (first.dbAnchor or 1) == 2 then first, second = second, first end
+      if second and (first.dbAnchor or 1) == 2 then first, second = second, first end
       local Font = require("src.render.Font")
       local bx = math.floor((battle.wideRegion and 304 or 160) / 8) - 12
       Font.drawBox(bx, 12, 12, 6)
@@ -1832,15 +1854,16 @@ return function(mod)
     local scene = sceneActive(battle)
     if battle.phase == "db_target" then
       local aimed = battle.__dbAimBattler or battle.enemy
-      if battle.enemy and battle.enemy2 then
-        drawAimMenu(battle, battle.enemy, battle.enemy2, aimed)
+      if battle.enemy then
+        if aimed == battle.player2 then drawAimMenu(battle, aimed, nil, aimed)
+        else drawAimMenu(battle, battle.enemy, battle.enemy2, aimed) end
       end
       -- the aimed foe holds the lead slot while the prompt is up; the
       -- frame still lands on its sprite because foeRect keys off the
       -- battler's own sticky anchor, not the slot
       if not scene and aimed
          and math.floor(love.timer.getTime() * 4) % 2 == 0 then
-        local tx, ty, tw = foeRect(battle, aimed)
+        local tx, ty, tw = (aimed == battle.player2 and allyRect or foeRect)(battle, aimed)
         love.graphics.setColor(1, 0.2, 0.2, 1)
         love.graphics.rectangle("line", tx, ty, tw, tw)
         love.graphics.setColor(1, 1, 1, 1)
@@ -1909,6 +1932,8 @@ return function(mod)
       hitB = st.enemy
     elseif inside(st.enemy2, foeRect) then
       hitB = st.enemy2
+    elseif not st.__dbPendingBall and inside(st.player2, allyRect) then
+      hitB = st.player2
     end
     if not hitB then return next(game, ev) end
     if hitB == st.__dbAimBattler then

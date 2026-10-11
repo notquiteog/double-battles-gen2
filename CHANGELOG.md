@@ -1,6 +1,10 @@
 ## Unreleased
 
-Gen3 target selection now uses battlefield rows: Left/Right stays among enemies, Down selects the allied row, and Up returns to the previous enemy. Horizontal input never crosses into or cycles the allied row, even when a custom move permits self-targeting. Native move eligibility, confirmation, cancellation and absent-slot handling remain authoritative. Focused navigation and57 native adapter contracts pass; actual LeafGreen and Emerald trainer doubles, partner commands and cancellation pass on0.3.74. Gen1/2 ally-target resolver/wire support is still separate unfinished work.
+Gen1/2 target prompts now use Left/Right for foes and Up/Down for foes versus the teammate. Gen2 retains a ROM-font target prompt when Modern UI is off. Ally moves resolve against the selected battler, including that side's defensive screens; fainted teammates never redirect the move into a foe. Gen2 phazing excludes occupied slots and respects paired-trainer ownership; friendly Roar cannot flee a wild encounter. Gen1 retains native trainer-style phazing failure for ally Roar.
+
+Both optional online providers encode and validate sender-relative ally slots, rejecting self, invalid and fainted targets. Both peers need this update for ally-target packets; older clients reject these slots safely. Verified on Gen1Recomp 0.3.74: Red native input plus a complete 10-turn loopback ENet battle with matching hashes, Crystal native prompts and 3 mirrored core turns, and 65 native Gen2 mechanics checks. This does not certify every move across every game.
+
+Gen3 target selection now uses battlefield rows: Left/Right stays among enemies, Down selects the allied row, and Up returns to the previous enemy. Horizontal input never crosses into or cycles the allied row, even when a custom move permits self-targeting. Native move eligibility, confirmation, cancellation and absent-slot handling remain authoritative. Focused navigation and 57 native adapter contracts pass; actual LeafGreen and Emerald trainer doubles, partner commands and cancellation pass on 0.3.74.
 
 ## 0.14.0 — 2026-10-10
 

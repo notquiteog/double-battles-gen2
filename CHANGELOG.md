@@ -1,3 +1,10 @@
+## 0.14.2 — 2026-10-13
+
+- Integrate optional compact Modern UI status cards and command layout in Gen2 doubles.
+- Keep paired targets separated and preserve native battle fields and fallback rendering when Modern UI is absent or disabled.
+
+Focused optional-provider and fallback HUD tests pass; representative Gen1Recomp 0.3.85 rendering was checked. No gameplay or network protocol change in this release.
+
 ## 0.14.1 — 2026-10-11
 
 Restore gender, caught indicators and EXP on Gen2 cards; correct directional target selection and Gen1/2 spread-move resolution. Native paired ENet lifecycle and Gen3 trainer doubles checked, including replacements. This does not certify every move or internet condition.

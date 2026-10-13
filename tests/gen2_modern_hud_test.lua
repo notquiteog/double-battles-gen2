@@ -107,3 +107,15 @@ finalHud(function()return 'native'end,game);assert(#labels>0,'final window HUD a
 labels={};s:drawSceneBody();game.stack.top=function()return{}end
 finalHud(function()end,game);assert(#labels==0,'stale cards covered native party/bag')
 print('window HUD deferred past native frame and hidden by stack menus')
+
+local semantic={}
+local layouts=0
+theme.layoutStatusCards=function(items)layouts=layouts+1;assert(#items==4);local out={};for _,i in ipairs(items)do out[i.id]={x=i.id*100,y=30}end;return out end
+theme.combatCardSize=function(ally)return 90,ally and 25 or 18 end
+theme.combatCard=function(x,y,w,h,tip,selected,c)semantic[#semantic+1]=c;assert(w==90);return true end
+-- Restore direct scene hooks, keeping real state selection and native values.
+Hud.install(State,function()return true end,function()return theme end,function(slot)return ({player=300,player2=600,enemy=1200,enemy2=1800})[slot],400 end)
+setmetatable(s,{__index=State});s.phase='menu';s:drawSceneBody()
+assert(#semantic==4 and layouts==4,'semantic provider missed a double slot or shared layout')
+for _,c in ipairs(semantic)do assert(c.name and c.level and c.hp and c.maximum,'native card fields dropped')end
+print('optional semantic compact cards preserve all four native battlers')

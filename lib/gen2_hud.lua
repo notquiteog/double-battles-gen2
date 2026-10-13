@@ -58,7 +58,30 @@ local function card(s,slot,x,y,ally)
  if anchorProvider then ax,ay=anchorProvider(slot)end
  if ax and ay and theme and theme.aboveHead then
   ax,ay=ax/M.layout.scale,ay/M.layout.scale
-  x,y=theme.aboveHead(ax,ay,76,ally and 29 or 26,M.layout.width,M.layout.height)
+  local cw,ch=76,ally and 29 or 26
+  if theme.combatCardSize then cw,ch=theme.combatCardSize(ally)end
+  x,y=theme.aboveHead(ax,ay,cw,ch,M.layout.width,M.layout.height)
+  if theme.combatCard and theme.layoutStatusCards then
+   local items,ids={},{player=0,enemy=1,player2=2,enemy2=3}
+   for _,key in ipairs({'player','enemy','player2','enemy2'})do
+    local m=s:activeMon(key)
+    if m and (key=='player'or key=='enemy'or s.battle[key])then
+     local hx,hy=anchorProvider(key)
+     if hx and hy then
+      local aw,ah=theme.combatCardSize(key=='player'or key=='player2')
+      items[#items+1]={id=ids[key],x=hx/M.layout.scale,y=hy/M.layout.scale,w=aw,h=ah}
+     end
+    end
+   end
+   local placed=theme.layoutStatusCards(items,M.layout.width,M.layout.height)[ids[slot]]
+   if placed then x,y=placed.x,placed.y end
+  end
+  if theme.combatCard then
+   local exp=slot=='player'and(s.shownExp or 0)/require('src.ui.gen2.BattleHud').EXP_LENGTH_PX or nil
+   if theme.combatCard(x,y,cw,ch,ax,s.phase=='db2_target'and s.battle.doubles and s.battle.doubles[s.doubleTargetSlot]==mon,
+    {ally=ally,name=s:name(mon),level=mon.level or 1,gender=mon.gender,status=s:statusTag(mon,slot),hp=hp,maximum=maximum,
+     exp=exp,caught=not ally and s.battle.wild and s.dexCaught and s:dexCaught(mon)})then return end
+  end
   theme.statusCard(x,y,76,ally and 29 or 26,ax,s.phase=='db2_target' and s.battle.doubles and s.battle.doubles[s.doubleTargetSlot]==mon)
  else panel(x,y,76,ally and 29 or 26,s.phase=='db2_target' and s.battle.doubles and s.battle.doubles[s.doubleTargetSlot]==mon)end
  label(s:name(mon),x+3,y+2,49)

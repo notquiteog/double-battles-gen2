@@ -130,11 +130,13 @@ function M.drawBottom(s)
   love.graphics.translate(theme and M.layout.width-168 or (M.layout.width-160)/2,M.layout.height-(theme and 165 or 158))
   if not theme or phase~='menu' then panel(2,100,156,52)end
   if phase=='menu' then
-   if theme and theme.commandHub then theme.commandHub(84,129)end
+   local m=theme and theme.commandMetrics and theme.commandMetrics()or{height=62,row=30,cell=22,hub=29}
+   if theme then love.graphics.translate(0,62-m.height)end
+   if theme and theme.commandHub then theme.commandHub(84,100+m.hub,m.height)end
    for i,name in ipairs(s:menuLabels()) do
-    local x=5+((i-1)%2)*(theme and 82 or 77);local y=103+math.floor((i-1)/2)*(theme and 30 or 18)
+    local x=5+((i-1)%2)*(theme and 82 or 77);local y=103+math.floor((i-1)/2)*(theme and m.row or 18)
     local selected=s.menuIndex==i
-    if theme and theme.button then theme.button(x,y,76,22,({'fight','pokemon','bag','run'})[i],selected,i%2==0)else panel(x,y,73,15,selected)end
+    if theme and theme.button then theme.button(x,y,76,m.cell,({'fight','pokemon','bag','run'})[i],selected,i%2==0)else panel(x,y,73,15,selected)end
     -- Use the engine's labels/order so controller selection stays identical.
     if theme and theme.text then theme.text(({"FIGHT","PKMN","ITEMS","RUN"})[i] or name,x+5,y+5,66,{1,1,.96,1},true)else label(name,x+5,y+3,64,selected and {1,1,1,1} or nil)end
    end

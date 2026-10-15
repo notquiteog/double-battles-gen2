@@ -1,3 +1,7 @@
+## 0.14.3 — 2026-10-15
+
+Maintenance packaging release for the coordinated seven-mod update. Runtime behavior is unchanged from 0.14.2; existing optional integrations and independent installation remain supported.
+
 ## 0.14.2 — 2026-10-13
 
 - Integrate optional compact Modern UI status cards and command layout in Gen2 doubles.

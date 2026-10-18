@@ -1,3 +1,7 @@
+## 0.14.4 — 2026-10-17
+
+Expose optional native battle layout and per-slot Gen2 presentation readers for correct partner identities, send-out slots and compatible 3D framing. Companion mods remain optional.
+
 ## 0.14.3 — 2026-10-15
 
 Maintenance packaging release for the coordinated seven-mod update. Runtime behavior is unchanged from 0.14.2; existing optional integrations and independent installation remain supported.

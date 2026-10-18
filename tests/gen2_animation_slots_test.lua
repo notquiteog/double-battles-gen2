@@ -18,8 +18,9 @@ for _,slot in ipairs({'player','player2','enemy','enemy2'})do
  if slot:match('2$')then
   local base=slot:gsub('2$','');s.picHidden[slot]=true;s.picHidden[base]=true;s:revealSentOut()
   assert(not s.picHidden[slot]and s.picHidden[base],'partner reveal changed lead')
+  s.picHidden[slot]=true -- native no-script completion also clears the actor
   local a,b,c=s:finishSendOut(s.afterSendOut);assert(a==nil and b==mons[slot]and c==false)
-  assert(s.hud==base and s.cry==mons[slot]and s.picHidden[base],'native cry/HUD or lead hidden state')
+  assert(s.hud==base and s.cry==mons[slot]and s.picHidden[base]and not s.picHidden[slot],'native cry/HUD or lead hidden state')
  end
 end
 s.fail=true;assert(not pcall(s.finishSendOut,s,s.afterSendOut));assert(s.picHidden.enemy)

@@ -43,6 +43,7 @@ function M.install(State)
   State.finishSendOut=function(s,after,...)
    if not(active(s)and after and after.side~=base(after.side))then return finish(s,after,...)end
    local side=base(after.side);local hidden=s.picHidden[side]
+   s.picHidden[after.side]=false
    local normalized={};for k,v in pairs(after)do normalized[k]=v end;normalized.side=side
    local result=pack(pcall(finish,s,normalized,...));s.picHidden[side]=hidden
    if not result[1]then error(result[2],0)end

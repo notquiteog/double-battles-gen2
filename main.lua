@@ -2524,6 +2524,7 @@ return function(mod)
     local ok, State = pcall(require, "src.ui.gen2.BattleState")
     if ok and State then
       assert(load(assert(mod:read("lib/gen2/native_layout.lua")), "@doubles/gen2/native_layout"))().install(State)
+      assert(load(assert(mod:read("lib/gen2/animation_slots.lua")), "@doubles/gen2/animation_slots"))().install(State)
     end
   end
 

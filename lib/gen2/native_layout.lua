@@ -40,14 +40,25 @@ function M.install(State)
   if not active(s) or(back and s.showPlayerTrainer)or(not back and s.showEnemyTrainer)then return picture(s,mon,back,...)end
   local side=back and 'player'or'enemy';local other=s:activeMon(side..'2')
   local args={...};local scale=back and .75 or .625
+  local function drawSlot(slot,actor)
+   local proxy={}
+   -- The original picture method uses literal primary-side names. Scope its
+   -- public readers to this actor without changing the original screen.
+   for _,name in ipairs({'animPicState','picBoxCleared','isUnderground','faintSink'})do
+    local read=s[name]
+    if type(read)=='function'then proxy[name]=function(_,key,...)return read(s,key==side and slot or key,...)end end
+   end
+   setmetatable(proxy,{__index=s,__newindex=s})
+   return picture(proxy,actor,back,unpack(args))
+  end
   local cx=back and (State.PLAYER_PIC_TILE_X+State.PLAYER_PIC_TILES/2)*8
    or(State.ENEMY_PIC_TILE_X+State.ENEMY_PIC_TILES/2)*8
   local bottom=back and(State.PLAYER_PIC_TILE_Y+State.PLAYER_PIC_TILES)*8
    or(State.ENEMY_PIC_TILE_Y+State.ENEMY_PIC_TILES)*8
   if other and(other.hp or 0)>0 then
-   transformed(back and 61 or 139,back and 90 or 44,scale,cx,bottom,function()return picture(s,other,back,unpack(args))end)
+   transformed(back and 61 or 139,back and 90 or 44,scale,cx,bottom,function()return drawSlot(side..'2',other)end)
   end
-  return transformed(back and 21 or 100,back and 94 or 39,scale,cx,bottom,function()return picture(s,mon,back,unpack(args))end)
+  return transformed(back and 21 or 100,back and 94 or 39,scale,cx,bottom,function()return drawSlot(side,mon)end)
  end
  for _,side in ipairs({'enemy','player'})do
   local name=side=='enemy'and'drawEnemyHud'or'drawPlayerHud';local original=State[name]

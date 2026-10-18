@@ -9,6 +9,16 @@ end
 function M.install(State)
  if State.nativeDoubleLayoutInstalled then return end
  State.nativeDoubleLayoutInstalled=true
+ -- A versioned, optional scene hint. HUD providers retain their own layout;
+ -- renderer companions need neither their private state nor copied geometry.
+ State.nativeSceneLayout=function(s)
+  if not active(s) then return nil end
+  if type(s.usesModernDoublesHud)=='function' then
+   local ok,modern=pcall(s.usesModernDoublesHud,s)
+   if not ok or modern then return nil end
+  end
+  return 'gen2-native-pair'
+ end
  -- Optional scene renderers can paint native backplates in exactly this
  -- layout without depending on the doubles package or guessing its slots.
  State.drawNativeDoublesBackplates=function(s,drawBox)

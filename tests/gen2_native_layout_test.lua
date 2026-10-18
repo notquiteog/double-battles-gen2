@@ -11,9 +11,18 @@ function State:drawEnemyHud()local m=self:activeMon('enemy');huds[#huds+1]={m,se
 function State:drawPlayerHud()local m=self:activeMon('player');huds[#huds+1]={m,self:statusTag(m,'player'),self.shownExp}end
 dofile('lib/gen2/native_layout.lua').install(State)
 local s=setmetatable({battle={},shownExp=4,shownLevel=10,ballRows={player=true}},{__index=State})
+assert(s:nativeSceneLayout()==nil,'single battle advertised paired layout')
 s:drawPic(mons.player,true);s:drawEnemyHud();assert(#draws==1 and #huds==1,'single battle changed')
 assert(not s:drawNativeDoublesBackplates(function()error('single plate changed')end))
 draws,huds={},{};s.battle.doubles={}
+assert(s:nativeSceneLayout()=='gen2-native-pair')
+s.tutorial=true;assert(s:nativeSceneLayout()==nil);s.tutorial=nil
+s.usesModernDoublesHud=function()return true end;assert(s:nativeSceneLayout()==nil)
+s.usesModernDoublesHud=function()error('HUD provider unavailable')end;assert(s:nativeSceneLayout()==nil)
+s.usesModernDoublesHud=function()return false end;assert(s:nativeSceneLayout()=='gen2-native-pair')
+s.usesModernDoublesHud=nil
+local layoutReader=State.nativeSceneLayout;dofile('lib/gen2/native_layout.lua').install(State)
+assert(State.nativeSceneLayout==layoutReader,'reinstall replaced public reader')
 s:drawPic(mons.enemy,false);s:drawPic(mons.player,true)
 s:drawEnemyHud();s:drawPlayerHud()
 assert(#draws==4 and #huds==4,'missing or duplicate native battler/HUD')

@@ -119,3 +119,18 @@ setmetatable(s,{__index=State});s.phase='menu';s:drawSceneBody()
 assert(#semantic==4 and layouts==4,'semantic provider missed a double slot or shared layout')
 for _,c in ipairs(semantic)do assert(c.name and c.level and c.hp and c.maximum,'native card fields dropped')end
 print('optional semantic compact cards preserve all four native battlers')
+
+local offsets={};G.translate=function(x,y)offsets[#offsets+1]={x,y}end
+local projected
+theme.viewport=function(w,h)assert(w==2560 and h==1440);return 80,40,2400,1320 end
+theme.layoutStatusCards=function(items,w,h)
+ assert(w==600 and h==330);projected={};local out={}
+ for _,i in ipairs(items)do projected[i.id]=i;out[i.id]={x=20,y=30}end
+ return out
+end
+Hud.drawSide(s,'enemy')
+assert(offsets[1][1]==80 and offsets[1][2]==40,'safe origin not applied')
+assert(projected[0].x==55 and projected[1].x==280 and projected[2].x==130 and projected[3].x==430)
+for _,i in pairs(projected)do assert(i.y==90,'actor anchor omitted safe-origin subtraction')end
+assert(Hud.layout.width==600 and Hud.layout.height==330 and depth==0)
+print('PASS safe-area card bounds, exact projected heads and graphics restoration')

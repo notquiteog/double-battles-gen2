@@ -30,3 +30,13 @@ memory, touch and safe-area behavior remain unverified by these desktop captures
 All six Gen2 companion suites pass, including new queue ownership, return/error
 restoration and animation/provider/fade fallback checks.
 Scratch evidence: `voxel-parity-20261020/pair-hud-0391`.
+
+## Optional modern safe area — 2026-10-20
+
+The modern provider's optional viewport method supplies safe-area bounds.
+Modern paired cards translate their origin and projected actor anchors together;
+older providers retain the whole-window layout. Original native HUD and input
+are unchanged. Official0.3.91 Crystal paired landscape640×360 and portrait360×640
+public-inset simulations pass actual card/command bounds; four captures inspected.
+All six Gen2 suites pass. Evidence: Battle Art
+`docs/NATIVE_SAFE_AREA_HUD_2026-10-20.md`; physical phones remain unverified.

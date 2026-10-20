@@ -653,6 +653,7 @@ function M.decorate(battle, secondPlayer, secondEnemy, options)
       event.nativeAnimationActors={player=rw.player,enemy=rw.enemy,
         playerMon=self.player,enemyMon=self.enemy}
       if rw[event.side] then event.side = rw[event.side] end
+      if rw[event.animSide] then event.animSide = rw[event.animSide] end
     end
     return engineEmit(self, event)
   end

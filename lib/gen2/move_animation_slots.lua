@@ -58,8 +58,25 @@ function M.install(State,View)
  local advance=State.advanceQueue
  State.advanceQueue=function(s,...)
   local event=s.queue and s.queue[1]
-  local old=current[s];current[s]=checked(s,event and event.nativeAnimationActors)
+  local old=current[s];local a=checked(s,event and event.nativeAnimationActors)
+  current[s]=a
+  local projected
+  if a and event.kind=='damage'and(event.side==a.player or event.side==a.enemy)then
+   -- The original queue reader only knows player/enemy when it selects a
+   -- standalone hit script. Preserve the real target for HP/HUD updates,
+   -- but explicitly supply that script and its real source context.
+   projected={};for k,v in pairs(event)do projected[k]=v end
+   local target=event.side==a.player and'player'or'enemy'
+   if projected.animSide==nil then
+    projected.animSide=target=='player'and a.enemy or a.player
+   end
+   if projected.anim==nil and not projected.animMove then
+    projected.anim=target=='player'and'ANIM_PLAYER_DAMAGE'or'ANIM_ENEMY_DAMAGE'
+   end
+   s.queue[1]=projected
+  end
   local result=pack(pcall(advance,s,...))
+  if projected and s.queue and s.queue[1]==projected then s.queue[1]=event end
   if s.pendingAfterAnim and s.anim then
    local record=runners[s.anim];pending[s.pendingAfterAnim]=record and record.actors or nil
   end

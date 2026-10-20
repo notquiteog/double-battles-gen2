@@ -14,6 +14,16 @@ function S:startAnim(key,opts)
 end
 function S:advanceQueue()
  local event=table.remove(self.queue,1)
+ if event.kind=='damage'then
+  self.lastDamage=event
+  if event.anim==false then return false end
+  local hit=event.anim or(event.side=='enemy'and'ANIM_ENEMY_DAMAGE'or'ANIM_PLAYER_DAMAGE')
+  if self.afterAnimPlayed and(hit=='ANIM_ENEMY_DAMAGE'or hit=='ANIM_PLAYER_DAMAGE')then
+   self.afterAnimPlayed=nil;return false
+  end
+  if hit==false then return false end
+  return self:startAnim(event.animMove or hit,{turn=self:turnFor(event.animSide or(event.side=='enemy'and'player'or'enemy'))})
+ end
  local result=self:startAnim(event.move,{turn=self:turnFor(event.side)})
  self.pendingAfterAnim={name=self:afterAnimFor(event.side),side=event.side}
  return result,nil,'native'
@@ -57,6 +67,26 @@ actors={player='player',enemy='player2',playerMon=mons.player,enemyMon=mons.play
 event();s.queue[1].side='player';s:advanceQueue()
 assert(s:animPicState('player').slide==8 and s:animPicState('player2').slide==-4)
 assert(not s:animPicState('enemy'),'friendly target painted a foe')
+-- Standalone hits retain real HP target keys but select the logical script.
+for _,pair in ipairs({{'player2','enemy2'},{'player','player2'},{'enemy2','enemy'}})do
+ actors={player=pair[1],enemy=pair[2],playerMon=mons[pair[1]],enemyMon=mons[pair[2]]}
+ for _,logical in ipairs({'player','enemy'})do
+  local ev={kind='damage',side=actors[logical],nativeAnimationActors=actors}
+  s.queue={ev};s:advanceQueue()
+  assert(s.anim.animId==(logical=='player'and'ANIM_PLAYER_DAMAGE'or'ANIM_ENEMY_DAMAGE'))
+  assert(s.anim.turn==(logical=='player'and 1 or 0))
+  assert(s.lastDamage.side==ev.side and ev.anim==nil and ev.animSide==nil,'original event or HP target mutated')
+  assert(s:nativeAnimationActors()==actors)
+ end
+end
+s.queue={{kind='damage',side=actors.enemy,nativeAnimationActors=actors,anim='ANIM_HIT_CONFUSION',animSide=actors.enemy}}
+s:advanceQueue();assert(s.anim.animId=='ANIM_HIT_CONFUSION'and s.anim.turn==1,'custom self hit changed')
+s.queue={{kind='damage',side=actors.enemy,nativeAnimationActors=actors,animMove='WRAP',animSide=actors.player}}
+s:advanceQueue();assert(s.anim.animId=='WRAP'and s.anim.turn==0,'residual move changed')
+s.queue={{kind='damage',side=actors.enemy,nativeAnimationActors=actors}};s.afterAnimPlayed=true
+assert(not s:advanceQueue()and not s.afterAnimPlayed,'native duplicate-hit latch changed')
+s.queue={{kind='damage',side=actors.enemy,nativeAnimationActors=actors,anim=false}}
+assert(not s:advanceQueue(),'disabled hit enabled')
 s.battle.doubles=nil;assert(not s:nativeAnimationActors())
 assert(s:turnFor('enemy2')==0,'standalone singles changed')
 print('PASS paired native move/after-animation ownership, cry/flying/palette identity, exact HUD, friendly target, error/stale/standalone fallback')

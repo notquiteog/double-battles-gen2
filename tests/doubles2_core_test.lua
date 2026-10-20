@@ -138,6 +138,12 @@ do -- four-actor round: both foes take damage, slot-2 aim honoured
     end
   end
   T.check(mapped,'partner move context was emitted')
+  battle.doubles.rewrite={player='player2',enemy='enemy2'}
+  battle:emit({kind='damage',side='enemy',animSide='enemy',anim='ANIM_HIT_CONFUSION'})
+  battle.doubles.rewrite=nil
+  local rewritten=battle:takeEvents()[1]
+  T.check(rewritten.side=='enemy2'and rewritten.animSide=='enemy2',
+    'explicit residual/self-hit animation side retains the partner slot')
 end
 
 do -- speed decides among four actives, not two

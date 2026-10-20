@@ -28,8 +28,21 @@ The fixture-only native core runner accepts the imported original rule table:
 luajit tests/run_gen2_core.lua ENGINE_ROOT IMPORTED_GEN2_TYPE_CHART
 ```
 
-The current native core passes 88 contracts. The rule table stays in the user's
+The current native core passes 89 contracts. The rule table stays in the user's
 isolated import, not this repository. Focused tests also cover stale identities,
 failed scripts, pending animations, friendly targets, detached palette ownership
-and single-battle fallback. Secondary damage events and native form proxies
-remain separate audit cases.
+and single-battle fallback.
+
+Standalone secondary damage events now keep the actual HP target and explicitly
+select the native logical hit script/source slot. Explicit self-hit and residual
+`animSide` keys are rewritten with the original event context. Custom scripts,
+disabled hit animations and the original duplicate-hit latch remain unchanged;
+the presentation adapter uses a detached event rather than rewriting the queue's
+original event record.
+
+Native 0.3.91 G/S/C damage replays passed with staging OFF/ON: partner-to-enemy
+49/49 frames, enemy-to-partner 42/42, and friendly-target 49/49. All four actors,
+identity, exact picture ownership and restoration passed. Twenty-one final
+captures were inspected (`damage-0391` scratch batch). These are explicit
+presentation replays of real damage events, not exhaustive battle simulation.
+Native form proxies remain a separate audit case.

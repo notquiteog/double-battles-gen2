@@ -33,11 +33,13 @@ local function guard(fn)
  G.push('all');G.setShader();G.setScissor()
  -- Use the full window for modern HUD placement, independently of the
  -- centered 160x144 handheld panel. Cap physical card/text size on desktops.
- local width,height=G.getDimensions()
+ local width,height=G.getDimensions();local ox,oy=0,0
+ local theme=themeProvider and themeProvider()
+ if theme and theme.viewport then ox,oy,width,height=theme.viewport(width,height)end
  local scale=math.max(1,math.min(4,width/320,height/240))
  local dpi=math.ceil(scale)
- G.origin();G.scale(scale,scale)
- M.layout={width=width/scale,height=height/scale,scale=scale}
+ G.origin();G.translate(ox,oy);G.scale(scale,scale)
+ M.layout={width=width/scale,height=height/scale,scale=scale,ox=ox,oy=oy}
  if not fonts[dpi] then fonts[dpi]=G.newFont(7,'normal',dpi) end
  font=fonts[dpi];G.setFont(font)
  local ok,err=pcall(fn)
@@ -57,7 +59,7 @@ local function card(s,slot,x,y,ally)
  local ax,ay
  if anchorProvider then ax,ay=anchorProvider(slot)end
  if ax and ay and theme and theme.aboveHead then
-  ax,ay=ax/M.layout.scale,ay/M.layout.scale
+  ax,ay=(ax-M.layout.ox)/M.layout.scale,(ay-M.layout.oy)/M.layout.scale
   local cw,ch=76,ally and 29 or 26
   if theme.combatCardSize then cw,ch=theme.combatCardSize(ally)end
   x,y=theme.aboveHead(ax,ay,cw,ch,M.layout.width,M.layout.height)
@@ -69,7 +71,7 @@ local function card(s,slot,x,y,ally)
      local hx,hy=anchorProvider(key)
      if hx and hy then
       local aw,ah=theme.combatCardSize(key=='player'or key=='player2')
-      items[#items+1]={id=ids[key],x=hx/M.layout.scale,y=hy/M.layout.scale,w=aw,h=ah}
+      items[#items+1]={id=ids[key],x=(hx-M.layout.ox)/M.layout.scale,y=(hy-M.layout.oy)/M.layout.scale,w=aw,h=ah}
      end
     end
    end

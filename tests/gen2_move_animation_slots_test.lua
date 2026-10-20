@@ -1,6 +1,12 @@
 local mons={player={},player2={},enemy={},enemy2={}}
 local S={}
-function S:activeMon(slot)return mons[slot]end
+function S:activeMon(slot)return self.shownMon and self.shownMon[slot]or mons[slot]end
+function S:push(ev)
+ if ev.kind=='transform'and self.shownMon[ev.side]==ev.mon or ev.kind=='identity'then
+  self.shownMon[ev.side]=setmetatable({species=ev.from or ev.species},{__index=ev.mon})
+ end
+ return true,nil,'queued'
+end
 function S:turnFor(side)return side=='enemy'and 1 or 0 end
 function S:afterAnimFor(side)return side=='player'and'ANIM_ENEMY_DAMAGE'or'ANIM_PLAYER_DAMAGE'end
 function S:startAnim(key,opts)
@@ -87,6 +93,23 @@ s.queue={{kind='damage',side=actors.enemy,nativeAnimationActors=actors}};s.after
 assert(not s:advanceQueue()and not s.afterAnimPlayed,'native duplicate-hit latch changed')
 s.queue={{kind='damage',side=actors.enemy,nativeAnimationActors=actors,anim=false}}
 assert(not s:advanceQueue(),'disabled hit enabled')
+-- Native push creates a provable display copy; arbitrary lookalikes do not.
+actors={player='player2',enemy='enemy2',playerMon=mons.player2,enemyMon=mons.enemy2}
+s.shownMon={player2=mons.player2,enemy2=mons.enemy2}
+local ok,nothing,queued=s:push({kind='transform',side='player2',mon=mons.player2,from='DITTO'})
+assert(ok and nothing==nil and queued=='queued')
+local shown=s.shownMon.player2;event();s:advanceQueue()
+assert(s:nativeAnimationActors().playerMon==shown,'native Transform display copy lost ownership')
+assert(s:animPicState('player2')and not s:animPicState('player'),'display copy moved to lead')
+local cry=s.anim.cry();assert(cry==shown,'native cry did not follow displayed identity')
+s.shownMon.player2=mons.player2
+assert(s:nativeAnimationActors().playerMon==mons.player2,'native Transform completion lost identity')
+s.shownMon.player2=setmetatable({species='DITTO'},{__index=mons.player2})
+assert(not s:nativeAnimationActors(),'unproven lookalike proxy accepted')
+s.shownMon.player2=mons.player2
+s:push({kind='identity',side='player2',mon=mons.player2,species='DITTO'})
+assert(s:nativeAnimationActors().playerMon==s.shownMon.player2,'native identity event lost ownership')
+s.shownMon.player2={};assert(not s:nativeAnimationActors(),'replacement identity accepted')
 s.battle.doubles=nil;assert(not s:nativeAnimationActors())
 assert(s:turnFor('enemy2')==0,'standalone singles changed')
 print('PASS paired native move/after-animation ownership, cry/flying/palette identity, exact HUD, friendly target, error/stale/standalone fallback')

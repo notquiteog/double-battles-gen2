@@ -45,4 +45,9 @@ Native 0.3.91 G/S/C damage replays passed with staging OFF/ON: partner-to-enemy
 identity, exact picture ownership and restoration passed. Twenty-one final
 captures were inspected (`damage-0391` scratch batch). These are explicit
 presentation replays of real damage events, not exhaustive battle simulation.
-Native form proxies remain a separate audit case.
+Native display copies created by the original public `push(event)` method now
+retain proven owner identity through Transform/identity events. No metatable,
+upvalue or species matching is used. Unproven copies and replaced actors still
+fall back. G/S/C original Transform replays pass 116/116 OFF/ON native frames;
+all four cards, old/new form order and actor identity pass. Nine final captures
+were inspected (`transform-0391`).

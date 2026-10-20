@@ -4,11 +4,6 @@ local M={}
 local function pack(...)return{n=select('#',...),...}end
 local function active(s)return s.battle and s.battle.doubles and not s.tutorial end
 local slots={player=true,player2=true,enemy=true,enemy2=true}
-local function valid(s,a)
- if not(active(s)and type(a)=='table'and slots[a.player]and slots[a.enemy]
-  and a.player~=a.enemy and a.playerMon and a.enemyMon)then return false end
- return s:activeMon(a.player)==a.playerMon and s:activeMon(a.enemy)==a.enemyMon
-end
 function M.install(State,View)
  if State.nativeMoveSlotsInstalled then return end
  State.nativeMoveSlotsInstalled=true
@@ -16,8 +11,32 @@ function M.install(State,View)
  local runners=setmetatable({},{__mode='k'})
  local pending=setmetatable({},{__mode='k'})
  local views=setmetatable({},{__mode='k'})
+ local origins=setmetatable({},{__mode='k'})
+ local function origin(mon)return origins[mon]or mon end
+ local function resolve(s,a)
+  if not(active(s)and type(a)=='table'and slots[a.player]and slots[a.enemy]
+   and a.player~=a.enemy and a.playerMon and a.enemyMon)then return end
+  local p,e=s:activeMon(a.player),s:activeMon(a.enemy)
+  if not p or not e or origin(p)~=origin(a.playerMon)or origin(e)~=origin(a.enemyMon)then return end
+  if p==a.playerMon and e==a.enemyMon then return a end
+  return{player=a.player,enemy=a.enemy,playerMon=p,enemyMon=e}
+ end
  local function checked(s,a)
-  local ok,result=pcall(valid,s,a);return ok and result and a or nil
+  local ok,result=pcall(resolve,s,a);return ok and result or nil
+ end
+ -- Only the original public queue method establishes display-copy provenance.
+ -- Do not infer identity from matching species or inspect a proxy's metatable.
+ local push=State.push
+ if type(push)=='function'then
+  State.push=function(s,event,...)
+   local before=s.shownMon and event and s.shownMon[event.side]
+   local result=pack(push(s,event,...))
+   if active(s)and event and event.mon and(event.kind=='transform'or event.kind=='identity')then
+    local shown=s.shownMon and s.shownMon[event.side]
+    if type(shown)=='table'and shown~=before and shown~=event.mon then origins[shown]=origin(event.mon)end
+   end
+   return unpack(result,1,result.n)
+  end
  end
  function State:nativeAnimationActors()
   local record=self.anim and runners[self.anim]

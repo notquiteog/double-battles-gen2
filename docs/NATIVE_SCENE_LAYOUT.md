@@ -10,3 +10,23 @@ companions must tolerate its absence in older installs.
 The layout uses the existing 160×144 native canvas: enemy HUDs on the left,
 player HUDs on the right, with picture feet centered near (120,42) and (41,94).
 `tests/gen2_native_layout_test.lua` verifies ownership and idempotent install.
+
+## Native text resolution — 2026-10-20
+
+Static native command/move/target panels compose their original HUD methods at
+window resolution through the public render.hud hook. Exact card transforms,
+ROM glyphs, HP/status/EXP readers and native panel origin/scale remain unchanged.
+This avoids permanently shrinking glyphs into160×144 before window enlargement.
+Animations, fades, wide layout, modern providers, covered/replaced battles and
+installations without the required hook retain the original drawing path.
+There are no extra canvases or desktop-only APIs.
+
+Official0.3.91 NVIDIA Gold/Silver/Crystal original trainer doubles pass native
+identity/HP checks at640×480,360×640,320×240 and240×360; all12captures inspected.
+Names and HP are legible in the first two sizes. At tiny1× sizes, native fractional
+card text still has fewer pixels than its source glyphs; this change does not
+reflow the native layout or certify phone readability. Physical Android/iOS
+memory, touch and safe-area behavior remain unverified by these desktop captures.
+All six Gen2 companion suites pass, including new queue ownership, return/error
+restoration and animation/provider/fade fallback checks.
+Scratch evidence: `voxel-parity-20261020/pair-hud-0391`.

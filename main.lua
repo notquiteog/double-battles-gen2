@@ -2566,6 +2566,7 @@ return function(mod)
         local p=ex and ex.battlePresentation
         if p and p.hudAnchor then return p.hudAnchor(slot) end
       end, mod)
+      assert(load(assert(mod:read("lib/gen2/native_hud_resolution.lua")),"@doubles/gen2/native_hud_resolution"))().install(State,mod)
     end
   end
 

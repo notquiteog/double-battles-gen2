@@ -40,7 +40,7 @@ function M.install(State,View)
  end
  function State:nativeAnimationActors()
   local record=self.anim and runners[self.anim]
-  if not record or self.afterSendOut or self.battle~=record.screen.battle then return end
+  if not record or self.afterSendOut or self~=record.screen or self.battle~=record.battle then return end
   return checked(record.screen,record.actors)
  end
  local function sideFor(s,side)
@@ -69,7 +69,7 @@ function M.install(State,View)
   end
   local result=pack(start(receiver,key,opts,...))
   if result[1]and s.anim then
-   runners[s.anim]=a and{screen=s,actors=a}or nil
+   runners[s.anim]=a and{screen=s,battle=s.battle,actors=a}or nil
    if a and s.animView then views[s.animView]=s end
   end
   return unpack(result,1,result.n)
@@ -97,7 +97,7 @@ function M.install(State,View)
   local result=pack(pcall(advance,s,...))
   if projected and s.queue and s.queue[1]==projected then s.queue[1]=event end
   if s.pendingAfterAnim and s.anim then
-   local record=runners[s.anim];pending[s.pendingAfterAnim]=record and record.actors or nil
+   pending[s.pendingAfterAnim]=runners[s.anim]
   end
   current[s]=old
   if not result[1]then error(result[2],0)end
@@ -105,7 +105,8 @@ function M.install(State,View)
  end
  local follow=State.startPendingAfterAnim
  State.startPendingAfterAnim=function(s,...)
-  local old=current[s];current[s]=checked(s,pending[s.pendingAfterAnim])
+  local record=pending[s.pendingAfterAnim]
+  local old=current[s];current[s]=record and record.screen==s and record.battle==s.battle and checked(s,record.actors)or nil
   local result=pack(pcall(follow,s,...));current[s]=old
   if not result[1]then error(result[2],0)end
   return unpack(result,2,result.n)

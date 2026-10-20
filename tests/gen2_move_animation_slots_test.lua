@@ -51,6 +51,9 @@ local function event(move)
 end
 event();local a,b,c=s:advanceQueue();assert(a and b==nil and c=='native')
 assert(s:nativeAnimationActors()==actors)
+local oldBattle=s.battle;s.battle={doubles={},player=mons.player,enemy=mons.enemy}
+assert(not s:nativeAnimationActors(),'runner survived battle replacement with reused actors')
+s.battle=oldBattle
 assert(s:animPicState('player2').slide==8 and s:animPicState('enemy2').slide==-4)
 assert(not s:animPicState('player')and not s:animPicState('enemy'),'native effect leaked to uninvolved leads')
 assert(s:hudCleared('player2')and not s:hudCleared('player')and not s:hudCleared('enemy2'))
@@ -60,6 +63,10 @@ assert(s.battle.player==mons.player and s.battle.enemy==mons.enemy,'live context
 local x,y=s.animView:drawObjects(s.anim,s.battle,'native');assert(x==nil and y=='native')
 assert(painted.player==mons.player2 and painted.enemy==mons.enemy2 and painted~=s.battle)
 assert(s.pendingAfterAnim.name=='ANIM_ENEMY_DAMAGE','partner chose wrong native after-animation')
+local oldPending=s.pendingAfterAnim
+s.battle={doubles={},player=mons.player,enemy=mons.enemy};s:startPendingAfterAnim()
+assert(not s:nativeAnimationActors(),'pending script crossed battle ownership boundary')
+s.battle=oldBattle;s.pendingAfterAnim=oldPending
 s.anim=nil;assert(s:startPendingAfterAnim());assert(s:nativeAnimationActors()==actors,'after-animation lost actor map')
 local saved=mons.enemy2;mons.enemy2={}
 assert(not s:nativeAnimationActors(),'replacement inherited queued actor effects');mons.enemy2=saved

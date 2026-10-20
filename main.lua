@@ -2525,6 +2525,7 @@ return function(mod)
     if ok and State then
       assert(load(assert(mod:read("lib/gen2/native_layout.lua")), "@doubles/gen2/native_layout"))().install(State)
       assert(load(assert(mod:read("lib/gen2/animation_slots.lua")), "@doubles/gen2/animation_slots"))().install(State)
+      assert(load(assert(mod:read("lib/gen2/move_animation_slots.lua")), "@doubles/gen2/move_animation_slots"))().install(State,require("src.ui.gen2.BattleAnimView"))
     end
   end
 

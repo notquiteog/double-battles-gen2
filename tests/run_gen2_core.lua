@@ -1,5 +1,9 @@
 -- Run fixture-only core tests against an unpacked engine; no ROM/profile load.
-local engine=assert(arg[1],'usage: luajit tests/run_gen2_core.lua ENGINE_ROOT')
+local engine=assert(arg[1],'usage: luajit tests/run_gen2_core.lua ENGINE_ROOT [IMPORTED_GEN2_TYPE_CHART]')
+if arg[2]then
+ local chart=assert(loadfile(arg[2]))()
+ package.loaded['tests.gen2_battle_rules']=assert(chart.battleRules,'import lacks Gen2 battle rules')
+end
 package.path=engine..'/?.lua;'..engine..'/?/init.lua;'..package.path
 local count=0
 package.loaded['tests.modkit']={

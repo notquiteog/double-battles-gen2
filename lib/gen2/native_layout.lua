@@ -74,6 +74,7 @@ function M.install(State)
     proxy.activeMon=function(_,key)return s:activeMon(key==side and slot or key)end
     proxy.hudHp=function(_,m,key)return s:hudHp(m,key==side and slot or key)end
     proxy.statusTag=function(_,m,key)return s:statusTag(m,key==side and slot or key)end
+    proxy.hudCleared=function(_,key)return s:hudCleared(key==side and slot or key)end
     local enemy=side=='enemy'
     return transformed(enemy and 2 or 90,enemy and(2+(index-1)*24)or(46+(index-1)*25),
      enemy and .75 or .625,enemy and 8 or 80,enemy and 0 or 56,

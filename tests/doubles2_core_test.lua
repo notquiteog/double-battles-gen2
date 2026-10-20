@@ -35,9 +35,9 @@ local TYPES = {
 }
 local MOVES = {
   TACKLE = { id = "TACKLE", name = "TACKLE", power = 35, type = "NORMAL",
-    accuracy = 95, pp = 35, effect = "EFFECT_NORMAL_HIT" },
+    accuracy = 95, accuracyRaw = 242, pp = 35, effect = "EFFECT_NORMAL_HIT" },
   GUST = { id = "GUST", name = "GUST", power = 40, type = "FLYING",
-    accuracy = 100, pp = 35, effect = "EFFECT_NORMAL_HIT" },
+    accuracy = 100, accuracyRaw = 255, pp = 35, effect = "EFFECT_NORMAL_HIT" },
 }
 local function species(name, stats, types)
   return { id = name, index = 1, name = name, baseStats = stats,
@@ -63,7 +63,8 @@ local POKEMON = {
     { "POISON", "FLYING" }),
 }
 local DATA = { pokemon = POKEMON, moves = MOVES,
-  type_chart = { types = TYPES, matchups = {} }, items = {} }
+  type_chart = { types = TYPES, matchups = {},
+    battleRules=package.loaded['tests.gen2_battle_rules'] }, items = {} }
 local fullDvs = { attack = 15, defense = 15, speed = 15, special = 15 }
 fullDvs.hp = Mon.hpDV(fullDvs)
 
@@ -125,6 +126,18 @@ do -- four-actor round: both foes take damage, slot-2 aim honoured
   end
   T.check(sides.enemy, "lead foe damage carries the enemy side")
   T.check(sides.enemy2, "slot-2 foe damage carries the enemy2 side")
+  local mapped=false
+  for _,ev in ipairs(events)do
+    if ev.kind=='move'and ev.side=='player2'then
+      local a=ev.nativeAnimationActors
+      T.check(a and a.player=='player2'and a.enemy=='enemy2',
+        'queued partner move retains both exact native context slots')
+      T.check(a.playerMon==party[2]and a.enemyMon==wild2,
+        'queued partner move retains original actor identities')
+      mapped=true
+    end
+  end
+  T.check(mapped,'partner move context was emitted')
 end
 
 do -- speed decides among four actives, not two
@@ -327,6 +340,9 @@ end
 
 do -- friendly damage binds the actual defender's stages and side screens
  local b,p,w,w2=battleWith(true)
+ -- Critical hits intentionally bypass Reflect; this fixture measures a
+ -- normal hit using the imported cart's actual critical threshold.
+ b.random=function(n)return n==256 and 200 or(n or 1)>1 and 1 or 0 end
  doubles2.decorate(b,p[2],w2)
  local hp,enemyHp=p[2].hp,w.hp
  local screens,party,foes=b.screens,b.party,b.enemyParty
@@ -346,7 +362,7 @@ end
 
 do -- ally Roar must draw from the bench, never flee or duplicate an active
  local b,p,w,w2=battleWith(true)
- MOVES.ROAR={id='ROAR',name='ROAR',power=0,type='NORMAL',accuracy=100,pp=20,effect='EFFECT_FORCE_SWITCH'}
+ MOVES.ROAR={id='ROAR',name='ROAR',power=0,type='NORMAL',accuracy=100,accuracyRaw=255,pp=20,effect='EFFECT_FORCE_SWITCH'}
  p[1].moves[3]={id='ROAR',pp=20,maxPp=20}
  doubles2.decorate(b,p[2],w2)
  b:useMove(p[1],p[2],'ROAR')
@@ -371,7 +387,7 @@ end
 
 do -- native primary plus spread targets spends one PP and respects allegiance
  for _,id in ipairs({'SURF','EARTHQUAKE','EXPLOSION'})do
-  MOVES[id]={id=id,name=id,power=35,type='NORMAL',accuracy=100,pp=20,
+  MOVES[id]={id=id,name=id,power=35,type='NORMAL',accuracy=100,accuracyRaw=255,pp=20,
    effect=id=='EXPLOSION' and 'EFFECT_SELFDESTRUCT' or 'EFFECT_NORMAL_HIT'}
   local b,p,w,w2=battleWith(true)
   for _,m in ipairs({p[1],p[2],w,w2})do m.hp=500;m.maxHp=500;m.stats.hp=500 end
@@ -388,7 +404,7 @@ end
 do -- ripple retains native Protect and Substitute mechanics
  local b,p,w,w2=battleWith(true)
  for _,m in ipairs({p[1],p[2],w,w2})do m.hp=500;m.maxHp=500;m.stats.hp=500 end
- MOVES.PROTECT={id='PROTECT',name='PROTECT',power=0,type='NORMAL',accuracy=100,pp=10,effect='EFFECT_PROTECT'}
+ MOVES.PROTECT={id='PROTECT',name='PROTECT',power=0,type='NORMAL',accuracy=100,accuracyRaw=255,pp=10,effect='EFFECT_PROTECT'}
  p[1].moves={{id='EARTHQUAKE',pp=20,maxPp=20}};p[2].moves={{id='PROTECT',pp=10,maxPp=10}}
  doubles2.decorate(b,p[2],w2);b:volatile(w2).substitute=100
  b:takeTurn({player={kind='move',move='EARTHQUAKE'},player2={kind='move',move='PROTECT'},enemy={kind='skip'},enemy2={kind='skip'}})

@@ -647,7 +647,13 @@ function M.decorate(battle, secondPlayer, secondEnemy, options)
   d2.rewrite = nil
   battle.emit = function(self, event)
     local rw = d2.rewrite
-    if rw and event and rw[event.side] then event.side = rw[event.side] end
+    if rw and event then
+      -- Keep both native animation contexts before the action restores its
+      -- lead slots. A queued move must not infer its target from later HP.
+      event.nativeAnimationActors={player=rw.player,enemy=rw.enemy,
+        playerMon=self.player,enemyMon=self.enemy}
+      if rw[event.side] then event.side = rw[event.side] end
+    end
     return engineEmit(self, event)
   end
   local engineUseMove = battle.useMove

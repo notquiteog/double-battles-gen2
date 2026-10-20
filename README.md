@@ -1,3 +1,13 @@
+## 0.14.5 — 2026-10-20
+
+Keep GSC move and chained hit animations attached to the actual paired actors,
+including proven native Transform display copies. Static original HUD cards
+compose at window resolution; optional Modern UI cards respect its safe area.
+Standalone operation and original UI fallback remain supported.
+
+Verified on official Gen1Recomp 0.3.91 with Gold, Silver and Crystal; coverage
+and remaining limits are recorded in [the release notes](RELEASE_NOTES_0.14.5.md).
+
 ## 0.13.0 — 2026-10-04
 
 Preserve Emerald native doubles, partner battles, Frontier formats and tutorials. Resolve trainer-class exclusions from the active game constants rather than FireRed numeric IDs.

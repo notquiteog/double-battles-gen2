@@ -40,3 +40,15 @@ are unchanged. Official0.3.91 Crystal paired landscape640×360 and portrait360×
 public-inset simulations pass actual card/command bounds; four captures inspected.
 All six Gen2 suites pass. Evidence: Battle Art
 `docs/NATIVE_SAFE_AREA_HUD_2026-10-20.md`; physical phones remain unverified.
+
+## Optional safe viewport — 0.14.5
+
+An optional theme's `viewport(windowWidth, windowHeight)` supplies the usable
+window origin and size. Modern paired cards translate into that viewport and
+subtract its origin from projected heads before dividing by HUD scale. Missing
+themes keep the full window; disabling Modern UI restores the original paired
+HUD. Focused tests check all four projected heads and graphics restoration.
+Official 0.3.91 Gold/Silver/Crystal desktop captures verify the optional provider
+with simulated landscape/portrait safe areas; physical-device readability and
+touch/safe-area behavior remain unverified. Double Battles alone also passes a
+Gold native trainer-double check with the original HUD and three damage replays.

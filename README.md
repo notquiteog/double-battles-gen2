@@ -1,3 +1,10 @@
+## 0.14.6 — 2026-10-20
+
+Consolidate the fixed 11:43:22 UTC snapshot with the verified 0.14.5 release,
+retaining its release notes and the newer native safe-area evidence. Gameplay
+and renderer source files are byte-identical to 0.14.5. Existing native
+verification remains applicable; this checkpoint adds no runtime behavior.
+
 ## 0.14.5 — 2026-10-20
 
 Keep GSC move and chained hit animations attached to the actual paired actors,

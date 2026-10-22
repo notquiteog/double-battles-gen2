@@ -42,3 +42,13 @@ Official 0.3.91 Gold/Silver/Crystal desktop captures verify the optional provide
 with simulated landscape/portrait safe areas; physical-device readability and
 touch/safe-area behavior remain unverified. Double Battles alone also passes a
 Gold native trainer-double check with the original HUD and three damage replays.
+
+## Optional modern safe area — 2026-10-20
+
+The modern provider's optional viewport method supplies safe-area bounds.
+Modern paired cards translate their origin and projected actor anchors together;
+older providers retain the whole-window layout. Original native HUD and input
+are unchanged. Official0.3.91 Crystal paired landscape640×360 and portrait360×640
+public-inset simulations pass actual card/command bounds; four captures inspected.
+All six Gen2 suites pass. Evidence: Battle Art
+`docs/NATIVE_SAFE_AREA_HUD_2026-10-20.md`; physical phones remain unverified.

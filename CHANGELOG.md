@@ -1,3 +1,7 @@
+## 0.14.7 — 2026-10-22
+
+Keep integrated Crystal animations moving for both teams during Gen 1 attack-target and switch-target selection without advancing battle logic. Uses an optional presentation-only provider callback; standalone operation and native gameplay remain unchanged. Verified in native Yellow doubles on Gen1Recomp 0.3.95.
+
 ## 0.14.4 — 2026-10-17
 
 Expose optional native battle layout and per-slot Gen2 presentation readers for correct partner identities, send-out slots and compatible 3D framing. Companion mods remain optional.

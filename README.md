@@ -165,3 +165,12 @@ local encounter settings do not modify link construction. Newly added local
 and native Gen3 parity paths have isolated contract coverage. Their gameplay,
 capture animation, and multi-client integration checks remain pending. Gen2
 spread-move parity and the complete doubles interaction matrix are not certified.
+
+### Animation during target selection
+
+Gen 1 target/switch prompts pause the original battle update, but optionally
+call enabled providers' public `updateBattlePresentation(battle, dt)` export.
+This callback must advance visual frames only, never gameplay, native input,
+turn queues or audio sequencing. It runs only while Doubles owns the paused
+prompt; ordinary phases retain the original update. Providers are optional,
+and unavailable/failing callbacks do not stop battle controls.

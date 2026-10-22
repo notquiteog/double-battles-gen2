@@ -59,6 +59,9 @@ return function(mod)
   })
   assert((loadstring or load)(assert(mod:read('lib/InGameOptions.lua')),'@double-battles-gen2/options'))().install(mod,schema,'DOUBLE BATTLES')
 
+  local updatePresentation = assert((loadstring or load)(
+    assert(mod:read('lib/battle_presentation.lua')), '@double_battles/presentation'))()
+
   local gen2OrganicUntil
   local function doubleChance()
     local v = mod.options:get("wild_doubles")
@@ -1583,6 +1586,7 @@ return function(mod)
     -- out to the move menu; everything else stays vanilla
     local origUpdate = battle.update
     battle.update = function(self, dt)
+      updatePresentation(self, dt)
       -- a lead menu with a banked pass-A action is stale state left by
       -- a path that never resolved (a failed RUN): drop the bank
       if self.phase == "menu" and self.__dbSlotA

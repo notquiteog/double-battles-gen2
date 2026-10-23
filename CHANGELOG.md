@@ -1,3 +1,9 @@
+## 0.14.8 — Portable API3 (2026-10-23)
+
+Move to Portable API3 native options rows. Add scoped optional organic-source attribution across canonical battle entry, with refusal/error cleanup. Preserve native targeting, cancellation and encounter rules.
+
+Requires Gen1Recomp 0.3.96 or newer. No companion mod is required.
+
 ## 0.14.7 — 2026-10-22
 
 Keep integrated Crystal animations moving for both teams during Gen 1 attack-target and switch-target selection without advancing battle logic. Uses an optional presentation-only provider callback; standalone operation and native gameplay remain unchanged. Verified in native Yellow doubles on Gen1Recomp 0.3.95.

@@ -146,7 +146,7 @@ T.eq(pp.x, 36 - pp.w * pp.sc / 2, "partner centered on column 36")
 T.eq(pp.y, 96 - pp.h * pp.sc, "partner feet on the baseline")
 
 -- the damage blink hides a battler mid-flicker; its card slot empties
-b.fx = { blink = { target = partner, frames = 6 } }
+b.fx = { blink = { target = partner, frames = require("src.core.Timing").BLINK_MON } }
 b.frame = 0
 placed = {}
 fakeOv.sideTexture(b, "enemy")

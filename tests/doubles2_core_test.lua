@@ -64,7 +64,7 @@ local POKEMON = {
 }
 local DATA = { pokemon = POKEMON, moves = MOVES,
   type_chart = { types = TYPES, matchups = {},
-    battleRules=package.loaded['tests.gen2_battle_rules'] }, items = {} }
+    battleRules=package.loaded['tests.gen2_battle_rules'] or require('tests.gen2_battle_rules_fixture')() }, items = {} }
 local fullDvs = { attack = 15, defense = 15, speed = 15, special = 15 }
 fullDvs.hp = Mon.hpDV(fullDvs)
 

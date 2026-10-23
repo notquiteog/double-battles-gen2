@@ -1,4 +1,4 @@
--- Isolated adapter contracts using the official 0.3.1 State implementation.
+-- Isolated adapter contracts using the explicitly supplied official engine State.
 -- No gameplay, display, profile, ROM, save, or network writes.
 local root=arg[1]or'/tmp/release-031-20260922/engine'
 package.path=root..'/?.lua;'..root..'/?/init.lua;'..package.path
@@ -116,4 +116,40 @@ check(run(function()return false end,{battle=st,pSpd=50,attempts=0})==true,'owne
 check(run(function()return false end,{battle=st,pSpd=10,attempts=0,rng=function()return 255 end})==false,'slower run can fail')
 check(run(function()return false end,{battle=st,pSpd=10,attempts=0,rng=function()return 0 end})==true,'slower run uses native odds and supplied RNG')
 st.link=true;check(run(function()return 'native' end,{battle=st})=='native','link run hook untouched')
+-- API3 uses canonical identifiers and constructs a fresh encounter descriptor.
+-- Exercise the actual public UnifiedWorld implementation, not a tagOrganic clone.
+local P=package.loaded['src.core.game3.pokemon']
+P.speciesFromName=function(id)return({PIDGEY=16,FARFETCHD=83,FARFETCH_D=83})[id]or tonumber(id)end
+P._names={[16]='PIDGEY',[83]="FARFETCH'D"}
+local game={session=session,data={pokemon={PIDGEY={},FARFETCH_D={}}}}
+local compat={worldBusy=function()return false end,speciesId=P.speciesFromName}
+local nativeWorld={new=function()return{_field=function()return{}end,startWildBattle=function(_,species,level)
+ Bridge.start(nil,game,{species=P.speciesFromName(species),level=level},{wild=true});return true
+end}end}
+local world=require('src.mods.UnifiedWorld').new(function()return game end,3,'emerald','source_test',function(name)
+ if name=='src.world.game3.WorldAPI'then return nativeWorld elseif name=='src.mods.Gen3Compat'then return compat end
+ return require(name)
+end)
+local building=false;local providerCalls=0
+mod.exports.registerPartnerSource{id='api3-flock',provide=function()check(building,'provider remains inside original flock owner scope');providerCalls=providerCalls+1;return'PIDGEY',10 end}
+values.wild_doubles='always';values.your_side='pair'
+local function flight(fn)
+ building=true;local out={pcall(function()return mod.exports.withOrganicSource('FARFETCHD',10,{map='route1',terrain='air',requirePartnerSource=true},fn)end)};building=false
+ return unpack(out)
+end
+local function launch()return world:startWildBattle('FARFETCHD',10)end
+local ok,result=flight(launch);check(ok and result and Battle.st.double and State.battler(Battle.st,3).mon.species==16,'public canonical fresh encounter retains original flock provenance')
+local count=providerCalls;launch();check(not Battle.st.double and providerCalls==count,'scope cannot tag a later unrelated scripted encounter')
+flight(function()launch();check(Battle.st.double,'first scoped encounter doubles');launch();check(not Battle.st.double,'source attribution consumed once')end)
+ok,result=flight(function()return nil,'refused'end);check(ok and result==nil,'public refusal preserved');launch();check(not Battle.st.double,'refused starter leaves no source')
+check(not flight(function()error('source failed')end),'starter exception propagated');launch();check(not Battle.st.double,'exception restores source scope')
+flight(function()
+ mod.exports.withOrganicSource('PIDGEY',10,{terrain='air',requirePartnerSource=true},function()world:startWildBattle('PIDGEY',10)end)
+ check(Battle.st.double,'nested provider source starts');launch();check(Battle.st.double,'outer provider source restored after nested call')
+end)
+values.wild_doubles='sometimes';rng.Random=function()return 99 end;count=providerCalls;flight(launch);check(not Battle.st.double and providerCalls==count,'native chance decline consumes no flockmate')
+rng.Random=function()return 0 end;flight(launch);check(Battle.st.double,'native chance success retains original flock source')
+values.wild_doubles='off';flight(launch);check(not Battle.st.double,'OFF does not force provider doubles')
+values.wild_doubles='always';mod.exports.unregisterPartnerSource('api3-flock');flight(launch);check(not Battle.st.double,'source-only provider never substitutes arbitrary grass mon')
+check(not mod.exports.withOrganicSource(83,10,{},launch),'public source contract rejects native numeric species IDs')
 print('gen3_parity_unit: '..N..' contracts passed')

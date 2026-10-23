@@ -80,6 +80,22 @@ return function(mod)
   local ctx=copy(context);ctx.requirePartnerSource=ctx.requirePartnerSource~=false
   randomEncounter[encounter]=ctx;return true
  end
+ -- Public startWildBattle creates its own native descriptor. Scope explicit
+ -- provider provenance around that synchronous call rather than retaining a
+ -- private encounter table or promoting unrelated scripted encounters.
+ local pendingSource
+ mod.exports.withOrganicSource=function(species,level,context,startBattle)
+  local native=type(species)=='string'and Pokemon.speciesFromName(species)or nil
+  if not(native and type(level)=='number'and level%1==0 and level>=1 and level<=100 and type(startBattle)=='function'and type(context)=='table')then return nil,'canonical species, level, context and starter required'end
+  local scope={species=native,level=level,context=copy(context)}
+  scope.context.requirePartnerSource=scope.context.requirePartnerSource~=false
+  local previous=pendingSource;pendingSource=scope
+  local result={n=0};local function pack(...)result.n=select('#',...);for i=1,result.n do result[i]=select(i,...)end end
+  pack(pcall(startBattle));pendingSource=previous
+  if not result[1]then error(result[2],0)end
+  return unpack(result,2,result.n)
+ end
+ mod.exports.organicProtocol=1
  local onStep=Encounters.onStep
  Encounters.onStep=function(map,terrain,opts,...)
   local enc=onStep(map,terrain,opts,...)
@@ -99,6 +115,10 @@ return function(mod)
   local request
   if opts.wild then
    local context=randomEncounter[foe];randomEncounter[foe]=nil
+   local scope=pendingSource
+   if not context and scope and not scope.consumed and type(foe)=='table'and foe.species==scope.species and foe.level==scope.level then
+    scope.consumed=true;context=scope.context
+   end
    if context and not vetoed(g,foe)and not(opts.safari or opts.legendary or opts.roamer or opts.wildScripted or opts.firstBattle or opts.oldManTutorial)
     and not(foe.safari or foe.legendary or foe.roamer or foe.wildScripted)
     and not(session.safari and session.safari.active)then

@@ -35,48 +35,23 @@ function M.install(mod,schema,title)
   end
   return out
  end
- if require('src.core.GameVersion').generation()==3 then
-  -- Game3 uses ctx-based native pages and does not dispatch ui.options.rows.
-  local Rows=require('src.ui.game3.option_rows')
-  if mod.read then
-   assert((loadstring or load)(assert(mod:read('lib/NativeOptionsOverflow.lua')),'@native_options_overflow'))()(mod,function()return active end)
-  end
-  -- Hot reload replaces this mod's owner without disturbing another mod's
-  -- native page. Old composed wrappers become inert and simply delegate.
-  Rows.modSettingsPages=Rows.modSettingsPages or {}
-  local previous=Rows.modSettingsPages[mod.id]
-  if previous then previous()end
-  Rows.modSettingsPages[mod.id]=function()active=false end
-  local build,group=Rows.build,Rows.group
-  local function owned(id)return type(id)=='string' and id:sub(1,#mod.id+1)==mod.id..':'end
-  Rows.build=function(ctx,...)
-   local out=build(ctx,...)
-   if active then for _,r in ipairs(rows(ctx.game))do
-    local step=r.step;r.step=function(c,dir)return step(c.game,dir)end
-    out[#out+1]=r
-   end end
-   return out
-  end
-  Rows.group=function(all,openPage)
-   if not active then return group(all,openPage)end
-   local kept,members={},{}
-   for _,r in ipairs(all)do local dst=owned(r.id) and members or kept;dst[#dst+1]=r end
-   local out=group(kept,openPage)
-   if #members>0 then out[#out+1]={id=mod.id..':settings',label=title or mod.id,group=true,
-    value=function()return #members..' OPTIONS'end,
-    activate=function()openPage(title or mod.id,members)end}end
-   return out
-  end
- else
-  mod.hooks:wrap('ui.options.rows',function(nextFn,game,base)
-   local out=nextFn(game,base);if not active or type(out)~='table'then return out end
-   local seen={};for _,r in ipairs(out)do if r.id then seen[r.id]=true end end
-   local at=#out+1
-   for i,r in ipairs(out)do if r.id=='cancel' or r.label=='CANCEL' or r.label=='BACK'then at=i;break end end
-   for _,r in ipairs(rows(game))do if not seen[r.id]then table.insert(out,at,r);at=at+1 end end
-   return out
-  end)
+ if mod.supports and not mod:supports('hooks','ui.options.rows')then
+  if mod.log then mod.log:warn('Native option row hook unavailable')end
+  return
  end
+ if require('src.core.GameVersion').generation()==3 and mod.read then
+  -- Native label overflow has no public drawing extension. Keep the bounded
+  -- optional renderer fix; option discovery/composition use the public hook.
+  assert((loadstring or load)(assert(mod:read('lib/NativeOptionsOverflow.lua')),'@native_options_overflow'))()(mod,function()return active end)
+ end
+ mod.hooks:wrap('ui.options.rows',function(nextFn,game,base,...)
+  local out=nextFn(game,base,...);if not active or type(out)~='table'then return out end
+  local seen={};for _,r in ipairs(out)do if r.id then seen[r.id]=true end end
+  local at=#out+1
+  for i,r in ipairs(out)do if r.id=='cancel'or r.label=='CANCEL'or r.label=='BACK'then at=i;break end end
+  for _,r in ipairs(rows(game))do if not seen[r.id]then table.insert(out,at,r);at=at+1 end end
+  return out
+ end)
  mod.hooks:wrap('core.quit_to_launcher',function(nextFn,...)
   active=false;return nextFn(...)
  end)

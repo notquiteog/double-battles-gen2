@@ -83,12 +83,12 @@ T.eq(#cursors, 1, "one cursor")
 local leadRowY = drawn[1].y
 T.eq(cursors[1].y, leadRowY, "cursor starts on the lead")
 
-press("down")
+press("right")
 overlay()
 T.eq(names(), "SPEAROW,ZUBAT", "order is sticky while aim moves")
 T.eq(cursors[1].y, drawn[2].y, "cursor follows the aim to the partner")
 
-press("up")
+press("left")
 overlay()
 T.eq(cursors[1].y, drawn[1].y, "and back")
 press("b")

@@ -11,6 +11,7 @@
 -- Link play is deliberately untouched: the manifest declares
 -- affects_link, so the handshake refuses mixed matches cleanly.
 return function(mod)
+  local function overworld(game)return game and(game.overworld or game.world)end
   if require('src.core.GameVersion').generation()==3 then
     return assert((loadstring or load)(assert(mod:read('lib/gen3/init.lua')),'@doubles/gen3/init'))()(mod)
   end
@@ -84,7 +85,7 @@ return function(mod)
         end
       end
     end
-    local p = game and game.overworld and game.overworld.player
+    local ow=overworld(game);local p=ow and ow.player
     return (p and p.freeFlying) and true or false
   end
 
@@ -109,7 +110,7 @@ return function(mod)
   -- the partner foe comes from the map's own grass slots, like any
   -- other encounter; a slotless map sends the lead foe's twin
   local function rollPartner(game, battle)
-    local ow = game.overworld
+    local ow = overworld(game)
     local slots = ow and ow.map
       and Sky.grassSlots(game.data, ow.map.id) or {}
     if #slots > 0 then
@@ -1945,7 +1946,7 @@ return function(mod)
     if not (pending and ev and ev.summonId == pending.summonId) then return end
     box.current = nil
     local p = pending
-    local Game = require("src.core.Game")
+    local Game = mod.game or {}
     decorate(Game, p.battle, ev.species, ev.level)
     p.battle.__dbRecruited = true
     p.push(p.battle)
@@ -2000,9 +2001,9 @@ return function(mod)
     if not (pending and ev and ev.summonId == pending.summonId) then return end
     box.current = nil
     local p = pending
-    local Game = require("src.core.Game")
-    local nowMap = Game.overworld and Game.overworld.map
-      and Game.overworld.map.id
+    local Game = mod.game or {}
+    local nowMap = overworld(Game) and overworld(Game).map
+      and overworld(Game).map.id
     if p.mapId and nowMap and p.mapId ~= nowMap then return end
     local sp, lv = providerPartner(Game, p.battle, 50, math.huge)
     if not sp then sp, lv = rollPartner(Game, p.battle) end
@@ -2109,7 +2110,7 @@ return function(mod)
     end
     -- returns true when the battle is held for a swoop-in
     OC.__doubleBattlesDecorate = function(owSelf, battle)
-      local Game = require("src.core.Game")
+      local Game = mod.game or {}
       if battle and battle.kind == "trainer" and not battle.__double
          and not battle.dead then
         -- a registered pair source gets first refusal: a second
@@ -2198,14 +2199,14 @@ return function(mod)
       end
       local ws = mod.find("wild_skies")
       local summon = ws and ws.exports and ws.exports.summonFlyer
-      local p = Game.overworld and Game.overworld.player
+      local p = overworld(Game) and overworld(Game).player
       if summon and p then
         local okS, sid = pcall(summon, p.cellX, p.cellY, { radius = 8 })
         if okS and sid then
           box.current = {
             battle = battle, summonId = sid,
             deadline = love.timer.getTime() + 6,
-            mapId = Game.overworld.map and Game.overworld.map.id,
+            mapId = overworld(Game).map and overworld(Game).map.id,
             push = function(b) OC.__doubleBattlesOrigPush(owSelf, b) end,
           }
           return true
@@ -2229,7 +2230,7 @@ return function(mod)
     if extra and extra > 0 then
       b.__dbExtraPayout = nil
       if ev.result == "win" then
-        local Game = require("src.core.Game")
+        local Game = mod.game or {}
         if Game.save then
           Game.save.money = math.min(999999, (Game.save.money or 0) + extra)
           mod.log:info("paid the first trainer's prize: %d", extra)
@@ -2266,8 +2267,8 @@ return function(mod)
 
   -- start a double on demand (scenario mods, scripts, tests)
   mod.exports.startWildDouble = function(spA, lvA, spB, lvB)
-    local Game = require("src.core.Game")
-    local ow = Game.overworld
+    local Game = mod.game or {}
+    local ow = overworld(Game)
     if not (ow and ow.pushBattle) then return false, "no overworld" end
     local BattleState = require("src.battle.BattleState")
     local okN, battle = pcall(BattleState.newWild, Game, spA, lvA)
@@ -2283,8 +2284,8 @@ return function(mod)
 
   -- start a trainer double on demand, option or no option
   mod.exports.startTrainerDouble = function(oppClass, partyIndex)
-    local Game = require("src.core.Game")
-    local ow = Game.overworld
+    local Game = mod.game or {}
+    local ow = overworld(Game)
     if not (ow and ow.pushBattle) then return false, "no overworld" end
     local BattleState = require("src.battle.BattleState")
     local okN, battle = pcall(BattleState.newTrainer, Game, oppClass,
@@ -2301,8 +2302,8 @@ return function(mod)
 
   -- two trainers versus your pair, staged by map scripts or mods
   mod.exports.startTrainerPair = function(oppA, idxA, oppB, idxB)
-    local Game = require("src.core.Game")
-    local ow = Game.overworld
+    local Game = mod.game or {}
+    local ow = overworld(Game)
     if not (ow and ow.pushBattle) then return false, "no overworld" end
     local BattleState = require("src.battle.BattleState")
     local okN, battle = pcall(BattleState.newTrainer, Game, oppA,

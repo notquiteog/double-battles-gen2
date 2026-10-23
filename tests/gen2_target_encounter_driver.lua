@@ -1,13 +1,14 @@
 return function(game)
  io.stdout:setvbuf("no")
- local U=dofile('/home/admin/Apps/Gen1Recomp/source/tests/drivers/util.lua')
+ local U=dofile(os.getenv('QA_UTIL')or'/home/admin/Apps/Gen1Recomp/source/tests/drivers/util.lua')
  local Mon=require('src.battle.gen2.Mon')
  local Encounter=require('src.battle.gen2.Encounter')
  local Field=require('src.world.gen2.FieldMoves')
+ if not game.world then game.stack:clear();assert(game:startWorld())end
  local w=game.world
  love.window.setMode(2560,1440,{resizable=true})
  game.mods.modOptions.double_battles={wild_doubles='always',gen2_doubles=true}
- game.mods.modOptions.overworld_wild_spawns.random_encounters=true
+ if game.mods.modOptions.overworld_wild_spawns then game.mods.modOptions.overworld_wild_spawns.random_encounters=true end
  w.trySceneScript=function()return false end;w.noWildEncounters=true
  assert(w:setMap('ROUTE_29',12,6,'down'))
  local lead=Mon.new(game.data,'CYNDAQUIL',18);Mon.stampOT(game.save,lead)

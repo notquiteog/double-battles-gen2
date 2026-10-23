@@ -80,6 +80,12 @@ The older `tagOrganic(nativeEncounter, context)` export is retained.
 - Opened native options screens retain all eight rows in FireRed, LeafGreen,
   Ruby, Sapphire and Emerald. Captures show native fonts, labels and values;
   RS long labels remain clipped/scrolled within their label column.
+- Native Gold/Silver/Crystal battle regression passes: externally owned wild
+  and fish encounters stay exact singles; native random grass rolls double;
+  native move menus cancel without PP use, and apply damage to either selected
+  foe; finishing a battle clears provenance before the next scripted spawn.
+  `tests/gen2_target_encounter_driver.lua` accepts QA_UTIL and boots its own
+  world when needed, so this check also runs with Double Battles alone.
 - These checks do not claim completed two-client battles in all eleven
   editions or complete removal of engine internals. Release integration and
   broader combined native gameplay checks are coordinated separately.

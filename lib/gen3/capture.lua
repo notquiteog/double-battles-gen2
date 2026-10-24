@@ -16,7 +16,12 @@ return function(mod)
   local out={};for _,id in ipairs({1,3})do if State.isAlive(st,id)then out[#out+1]=id end end;return out
  end
  local function refuse(text,id)
-  Ui.push(text,function()Ui.openMenu(id or 0)end)
+  -- Double command selection returns before the ordinary turn message pump.
+  -- Use its native selection-message lifecycle so the text is shown/acked
+  -- and returns to this battler without committing or losing either choice.
+  Ui._active=id or Ui._active or 0
+  Ui._selCmd=nil;Ui._selReturn='menu';Ui._mode='selmsg'
+  Ui.push(text)
   return false,text
  end
  local function choose(cmd)

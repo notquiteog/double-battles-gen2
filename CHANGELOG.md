@@ -1,3 +1,7 @@
+## 0.14.9 — Gen3 Poké Ball refusal fix (2026-10-23)
+
+Fix the frozen textbox when using a Poké Ball while both wild opponents remain in a double battle. The refusal now uses the native selection-message lifecycle and returns to the same battler's command menu. Preserve the partner's queued choice and menu context; refused throws consume no ball or turn. Companion mods remain optional.
+
 ## 0.14.8 — Portable API3 (2026-10-23)
 
 Move to Portable API3 native options rows. Add scoped optional organic-source attribution across canonical battle entry, with refusal/error cleanup. Preserve native targeting, cancellation and encounter rules.
